@@ -316,23 +316,7 @@ define(["N/record", "N/search", "N/runtime", "N/currentRecord"],
         }
 
         function isEmpty(stValue) {
-            if ((stValue == '') || (stValue == null) || (stValue == undefined)) {
-                return true;
-            }
-            else {
-                if (stValue instanceof String) {
-                    if ((stValue == '')) {
-                        return true;
-                    }
-                }
-                else if (stValue instanceof Array) {
-                    if (stValue.length == 0) {
-                        return true;
-                    }
-                }
-
-                return false;
-            }
+            return (stValue === '') || (stValue == null) || (stValue == undefined) || ( (stValue instanceof Array) && stValue.length == 0 );
         }
 
         function forceParseFloat(stValue) {
