@@ -622,10 +622,19 @@
             else 
               xml += '<body padding="0.5in 0.75in 0.5in 0.75in" height="101.6mm" width="152.4mm">';
 
+
+            // first check how many selected lines exist
+            var lineCount = request.getLineCount('custpage_table');
+            var linesToProcess = 0;
+            var linesProcessed = 0;
+            for (var invTable = 0; invTable < lineCount; invTable++) {
+              var check = request.getSublistValue('custpage_table', 'checkbox', invTable);
+                if (check == 'T')
+                  linesToProcess++;
+            }
             
-            // iterate over all lines in the posted table
-            var invcount = request.getLineCount('custpage_table');
-            for (var invTable = 0; invTable < invcount; invTable++) {
+            // now iterate no the lines and add the relevant selected ones to XML
+            for (var invTable = 0; invTable < lineCount; invTable++) {
 
                 // ignore rows which were not selected
                 var check = request.getSublistValue('custpage_table', 'checkbox', invTable);
@@ -646,12 +655,12 @@
                 if (labelType == "ER")
                   xml += '<table border="1" cellpadding="8px" style="width: 400px;padding:15px;">';
                 else {
-                  // table to create 2 columns
-                  if (invTable == 0)
+                  // extrenal table to create 2 columns
+                  if (linesProcessed == 0)
                     xml += '<table>';
 
                   // wrap every 2 in a row
-                  if (invTable % 2 == 0)
+                  if (linesProcessed % 2 == 0)
                     xml += '<tr style="padding-top:10px">';
 
                   xml += '<td><table border="1" cellpadding="6px" style="width: 340px">';
@@ -703,14 +712,18 @@
                     xml += getXMLRow('SIZES', programSize, 'font-size:10pt');
                     xml += '</table></td>';
 
+
+                  // extrnal table tags
                   // wrap every 2 in a row
-                  if (invTable % 2 == 1 || invTable == invcount - 1)
+                  if (linesProcessed % 2 == 1 || linesProcessed == linesToProcess - 1)
                     xml += '</tr>';
 
                   // last element - close the table
-                  if (invTable == invcount - 1)
+                  if (linesProcessed == linesToProcess - 1)
                     xml += '</table>';
                 }
+
+                linesProcessed++;
             }
 
             xml += '</body></pdf>';
