@@ -228,7 +228,7 @@ define(["N/record", "N/search", "N/runtime", "N/currentRecord"],
             currentRecord.setCurrentSublistValue({
                 sublistId: sublistIdFld,
                 fieldId: 'rate',
-                value: newPiecePrice,
+                value: round(newPiecePrice),
                 ignoreFieldChange: true
             });
         }
@@ -317,6 +317,10 @@ define(["N/record", "N/search", "N/runtime", "N/currentRecord"],
 
         function isEmpty(stValue) {
             return (stValue === '') || (stValue == null) || (stValue == undefined) || ( (stValue instanceof Array) && stValue.length == 0 );
+        }
+
+        function round(value) {
+            return isEmpty(value) ? value :value.toFixed(2);  
         }
 
         function forceParseFloat(stValue) {
