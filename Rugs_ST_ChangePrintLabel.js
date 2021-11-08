@@ -671,31 +671,31 @@
                 if (labelType == "ER")
                   xml += '<td style="width: 160px;">';
                 else
-                  xml += '<td style="width: 140px;padding:0px; margin:0px">';
+                  xml += '<td style="width: 120px;padding:0px; margin:0px">';
 
                 if (labelType == "ER")
                   xml += '<p><img src="https://4951235.app.netsuite.com/core/media/media.nl?id=2106&amp;c=4951235&amp;h=ece9007b3f17bf2cc27c" style="width: 140px; height: 20px;" /></p><p style="font-size: 6pt;">WWW.EXQUISITERUGS.COM</p>';
                 else
-                  xml += '<img src="https://4951235.app.netsuite.com/core/media/media.nl?id=10998&amp;c=4951235&amp;h=qD1ob0v4w04aBj-z-4MzzsdBLhLSfUneQKTXYyKSO0G5tp2-" style="width: 140px; height: 20px;" />';
+                  xml += '<img src="https://4951235.app.netsuite.com/core/media/media.nl?id=10998&amp;c=4951235&amp;h=qD1ob0v4w04aBj-z-4MzzsdBLhLSfUneQKTXYyKSO0G5tp2-" style="width: 120px; height: 20px;" />';
 
                 xml += '</td>';
 
                 if (labelType == "ER")
                   xml += '<td rowspan="2" style="width: 200px; margin-top: 0px; margin-bottom: 0px; font-size: 48pt;text-align: center;">';
                 else
-                  xml += '<td rowspan="2" style="width: 180px; font-size: 26pt;text-align: center;">';
+                  xml += '<td rowspan="2" style="width: 200px; font-size: 26pt;text-align: center;">';
 
                 xml += '<p style="text-align: center;">' + pdfSerialNo + '<barcode bar-width="2" codetype="code128" showtext="false" value="' + pdfSerialNo + '"></barcode></p>';
                 xml += '</td>';
                 xml += '</tr>';
 
-                xml += '<tr>';
-                xml += '<td>';
-                xml += '<p>DESIGN: <span '+ (labelType == "ER" ? 'style="font-size: 26pt;"' : '') + '><strong>'  + pdfDesignLabel + '</strong></span></p>';
-                xml += '</td>';
-                xml += '</tr>';
-
                 if (labelType == "ER") {
+
+                  xml += '<tr>';
+                  xml += '<td>';
+                  xml += '<p>DESIGN: <span style="font-size: 26pt"><strong>'  + pdfDesignLabel + '</strong></span></p>';
+                  xml += '</td>';
+                  xml += '</tr>';
 
                   xml += getXMLRow('SIZE', pdfSize, 'font-size:15pt');
                   xml += getXMLRow('COLLECTION', pdfCollection, 'font-size:18pt');
@@ -706,6 +706,7 @@
                     xml += '<p style="width:100%;border-top:1px dotted #999;margin:15px 0"></p>';
                 }
                 else {
+                    xml += getXMLRow('DESIGN', pdfDesignLabel, 'font-size:18pt');
                     xml += getXMLRow('COLLECTION', pdfCollection);
                     xml += getXMLRow('CONTENT', pdfContent);
                     xml += getXMLRow('ORIGIN', pdfExqRugsOrigin);
