@@ -310,10 +310,26 @@
                                   label: "ER - Category Size"
                               }));
 
-                              invNumColumn.push(search.createColumn({
+                              /*invNumColumn.push(search.createColumn({
                                   name: "formulatext",
                                   label: "Size Formula (Text)",
-                                  formula: "case when decode({custitemnumber_aecc_width_inches},null,'Y','N')='N'  and decode({custitemnumber_aecc_length_feet},null,'Y','N')='N'  then CONCAT(CONCAT(CONCAT(CONCAT(CONCAT(CONCAT(CONCAT({custitemnumber_aecc_width_feet},''''), {custitemnumber_aecc_width_inches}),'\" X '), {custitemnumber_aecc_length_feet}),''''), {custitemnumber_aecc_length_inches}),'\"')  else case when decode({custitemnumber_aecc_width_feet},null,'Y','N')='N'  and decode({custitemnumber_aecc_length_feet},null,'Y','N')='N'  THEN CONCAT(CONCAT(CONCAT({custitemnumber_aecc_width_feet},''' X '), {custitemnumber_aecc_length_feet}),'''') else '' End End"
+                                  formula: "case when decode({custitemnumber_aecc_width_inches},null,'Y','N')='N' and decode({custitemnumber_aecc_length_feet},null,'Y','N')='N'  then CONCAT(CONCAT(CONCAT(CONCAT(CONCAT(CONCAT(CONCAT({custitemnumber_aecc_width_feet},''''), {custitemnumber_aecc_width_inches}),'\" X '), {custitemnumber_aecc_length_feet}),''''), {custitemnumber_aecc_length_inches}),'\"')  else case when decode({custitemnumber_aecc_width_feet},null,'Y','N')='N'  and decode({custitemnumber_aecc_length_feet},null,'Y','N')='N'  THEN CONCAT(CONCAT(CONCAT({custitemnumber_aecc_width_feet},''' X '), {custitemnumber_aecc_length_feet}),'''') else '' End End"
+                              }));*/
+
+                              invNumColumn.push(search.createColumn({
+                                  name: "custitemnumber_aecc_width_feet"
+                              }));
+
+                              invNumColumn.push(search.createColumn({
+                                  name: "custitemnumber_aecc_width_inches"
+                              }));
+
+                              invNumColumn.push(search.createColumn({
+                                  name: "custitemnumber_aecc_length_feet"
+                              }));
+
+                              invNumColumn.push(search.createColumn({
+                                  name: "custitemnumber_aecc_length_inches"
                               }));
 
                               invNumColumn.push(search.createColumn({
@@ -510,31 +526,47 @@
 
                         var serialNum = invNumSearchResult[i].getValue(invNumSearchColObj.columns[0]);
                         var itemName = invNumSearchResult[i].getText(invNumSearchColObj.columns[1]);
+                        
                         var designLabel = invNumSearchResult[i].getText(invNumSearchColObj.columns[2]);
+                        if (!designLabel)
+                            designLabel = 'ASSRT';
+
                         var exqRugsOrigin = invNumSearchResult[i].getText(invNumSearchColObj.columns[3]);
                         var exqRugsPrgm = invNumSearchResult[i].getText(invNumSearchColObj.columns[4]);
                         var exqRugsContent = invNumSearchResult[i].getText(invNumSearchColObj.columns[5]);
                         var collection = invNumSearchResult[i].getText(invNumSearchColObj.columns[6]);
                         var quality = invNumSearchResult[i].getText(invNumSearchColObj.columns[7]);
                         var categorySize = invNumSearchResult[i].getText(invNumSearchColObj.columns[8]);
-                        var size = invNumSearchResult[i].getValue(invNumSearchColObj.columns[9]);
-                        var programSize = invNumSearchResult[i].getText(invNumSearchColObj.columns[10]);
+                        
+                        var widthFeet = invNumSearchResult[i].getValue(invNumSearchColObj.columns[9]);
+                        var widthInches = invNumSearchResult[i].getValue(invNumSearchColObj.columns[10]);
+                        var lengthFeet = invNumSearchResult[i].getValue(invNumSearchColObj.columns[11]);
+                        var lengthInches = invNumSearchResult[i].getValue(invNumSearchColObj.columns[12]);
 
+                        // convert the dimensions to size label
+                        var size = '';
 
+                        // in some cases we override from rug name (<name>-<size>)
                         if (
-                              ((categorySize != 'SAMPLE') && (categorySize != 'ORDER SIZE') && (categorySize != 'SPECIAL ORDER SIZE')) 
-                              && 
-                              (exqRugsPrgm != 'OAK NO IMAGE' && exqRugsPrgm != 'OAK WITH IMAGE' && exqRugsPrgm != 'CUSTOM')
-                           ) 
-                        {
+                              categorySize != 'SAMPLE' && categorySize != 'ORDER SIZE' && categorySize != 'SPECIAL ORDER SIZE'
+                              &&  exqRugsPrgm != 'OAK NO IMAGE' && exqRugsPrgm != 'OAK WITH IMAGE' && exqRugsPrgm != 'CUSTOM'
+                           ) {
                             var itemSplit = itemName.split("-");
                             size = itemSplit[1];
 
                         }
-
-                        if (!designLabel) {
-                            designLabel = 'ASSRT';
+                        // otherwise we use the dimensions
+                        else {
+                          size = (hasValue(widthFeet) ? widthFeet + "'" : "") + (hasValue(widthInches) ? widthInches + '"' : "");
+                          if (size.length > 0) { 
+                             size = size + " X " + 
+                             (hasValue(lengthFeet) ? lengthFeet + "'" : "") +
+                             (hasValue(lengthInches) ? lengthInches + '"' : "");
+                          }
                         }
+
+                        var programSize = invNumSearchResult[i].getText(invNumSearchColObj.columns[13]);
+
 
                         sublist.setSublistValue({
                             id: 'item',
@@ -557,6 +589,7 @@
                             line: index,
                             value: exqRugsContent
                         });
+
                         if (size) {
                             sublist.setSublistValue({
                                 id: 'custitem14',
@@ -751,6 +784,10 @@
 
           function getXMLRow(label, value, style) {
                return '<tr><td colspan="2"> <p>' + label + ': <span style="'+(style ? style : '')+'">' + (value ? value : '') + '</span></p></td></tr>';
+          }
+
+          function hasValue(value) {
+            return value && value != '0';
           }
 
           function GetDateFormat() {
