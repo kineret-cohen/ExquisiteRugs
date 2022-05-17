@@ -1,4 +1,4 @@
-  /**
+/**
    * @NApiVersion 2.x
    * @NScriptType Suitelet
    */
@@ -59,11 +59,11 @@
                       form.addField({
                           id: 'custpage_serialnumber',
                           label: '1. Serial Numbers',
-                          type: serverWidget.FieldType.MULTISELEC​T,
+                          type: serverWidget.FieldType.MULTISELECT,
                           source: 'inventorynumber',
                           container: 'filtersgroup'
                       });
-                      
+                     
                       var field = form.addField({
                           id: 'custpage_serialnofrom',
                           label: '2. Serial Numbers From',
@@ -75,7 +75,7 @@
                       field.updateBreakType({
                         breakType : serverWidget.FieldBreakType.STARTCOL
                       });
-                      
+                     
                       field = form.addField({
                           id: 'custpage_serialnoto',
                           label: 'To:',
@@ -125,7 +125,7 @@
 
                           sublist.addMarkAllButtons();
 
-                          // Add columns to be shown on Page 
+                          // Add columns to be shown on Page
                           sublist.addField({
                               id: 'checkbox',
                               label: 'CHECKBOX',
@@ -228,6 +228,15 @@
                               displayType: serverWidget.FieldDisplayType.HIDDEN
                           });
 
+                          sublist.addField({
+                              id: 'custitem_qr_code',
+                              label: 'QR Code',
+                              type: serverWidget.FieldType.TEXT
+                          }).updateDisplayType({
+                              displayType: serverWidget.FieldDisplayType.HIDDEN
+                          });
+
+
 
                           if (formSerialNumbers || formSerialNumberFrom || formSerialNumberTo || (documentType && getFromDoc)) {
 
@@ -244,7 +253,7 @@
 
                                 invNumFilter.pop();
 
-                              } 
+                              }
                               else if (formSerialNumberFrom && formSerialNumberTo) {
                                   invNumFilter.push(["formulanumeric: to_number({inventorynumber})", "between", formSerialNumberFrom, formSerialNumberTo ] );
                               }
@@ -310,12 +319,6 @@
                                   label: "ER - Category Size"
                               }));
 
-                              /*invNumColumn.push(search.createColumn({
-                                  name: "formulatext",
-                                  label: "Size Formula (Text)",
-                                  formula: "case when decode({custitemnumber_aecc_width_inches},null,'Y','N')='N' and decode({custitemnumber_aecc_length_feet},null,'Y','N')='N'  then CONCAT(CONCAT(CONCAT(CONCAT(CONCAT(CONCAT(CONCAT({custitemnumber_aecc_width_feet},''''), {custitemnumber_aecc_width_inches}),'\" X '), {custitemnumber_aecc_length_feet}),''''), {custitemnumber_aecc_length_inches}),'\"')  else case when decode({custitemnumber_aecc_width_feet},null,'Y','N')='N'  and decode({custitemnumber_aecc_length_feet},null,'Y','N')='N'  THEN CONCAT(CONCAT(CONCAT({custitemnumber_aecc_width_feet},''' X '), {custitemnumber_aecc_length_feet}),'''') else '' End End"
-                              }));*/
-
                               invNumColumn.push(search.createColumn({
                                   name: "custitemnumber_aecc_width_feet"
                               }));
@@ -336,6 +339,12 @@
                                   name: "custitem_program_sizes",
                                   join: "item",
                                   label: "ER - Program Size"
+                              }));
+
+                              invNumColumn.push(search.createColumn({
+                                  name: "custitem_qr_code",
+                                  join: "item",
+                                  label: "QR Code"
                               }));
 
                               var invNumSearch = search.create({
@@ -417,7 +426,7 @@
                       operator: search.Operator.ANYOF,
                       values: "PurchOrd"
                   }));
-              } 
+              }
               else if (documentType == 2) {
                   transFilter.push(search.createFilter({
                       name: 'type',
@@ -526,22 +535,27 @@
 
                         var serialNum = invNumSearchResult[i].getValue(invNumSearchColObj.columns[0]);
                         var itemName = invNumSearchResult[i].getText(invNumSearchColObj.columns[1]);
-                        
+                       
                         var designLabel = invNumSearchResult[i].getText(invNumSearchColObj.columns[2]);
-                        if (!designLabel)
-                            designLabel = 'ASSRT';
 
                         var exqRugsOrigin = invNumSearchResult[i].getText(invNumSearchColObj.columns[3]);
                         var exqRugsPrgm = invNumSearchResult[i].getText(invNumSearchColObj.columns[4]);
+
+                        if ( exqRugsPrgm == 'OAK NO IMAGE'  || exqRugsPrgm == 'OAK WITH IMAGE' || !designLabel ) 
+                            designLabel = 'ASSRT';
+
+
                         var exqRugsContent = invNumSearchResult[i].getText(invNumSearchColObj.columns[5]);
                         var collection = invNumSearchResult[i].getText(invNumSearchColObj.columns[6]);
                         var quality = invNumSearchResult[i].getText(invNumSearchColObj.columns[7]);
                         var categorySize = invNumSearchResult[i].getText(invNumSearchColObj.columns[8]);
-                        
+                       
                         var widthFeet = invNumSearchResult[i].getValue(invNumSearchColObj.columns[9]);
                         var widthInches = invNumSearchResult[i].getValue(invNumSearchColObj.columns[10]);
                         var lengthFeet = invNumSearchResult[i].getValue(invNumSearchColObj.columns[11]);
                         var lengthInches = invNumSearchResult[i].getValue(invNumSearchColObj.columns[12]);
+                        var programSize = invNumSearchResult[i].getText(invNumSearchColObj.columns[13]);
+                        var qrCode = invNumSearchResult[i].getValue(invNumSearchColObj.columns[14]);
 
                         // convert the dimensions to size label
                         var size = '';
@@ -557,15 +571,14 @@
                         }
                         // otherwise we use the dimensions
                         else {
+
                           size = (hasValue(widthFeet) ? widthFeet + "'" : "") + (hasValue(widthInches) ? widthInches + '"' : "");
-                          if (size.length > 0) { 
-                             size = size + " X " + 
+                          if (size.length > 0) {
+                             size = size + " X " +
                              (hasValue(lengthFeet) ? lengthFeet + "'" : "") +
                              (hasValue(lengthInches) ? lengthInches + '"' : "");
                           }
                         }
-
-                        var programSize = invNumSearchResult[i].getText(invNumSearchColObj.columns[13]);
 
 
                         sublist.setSublistValue({
@@ -629,6 +642,13 @@
                           });
                         }
 
+                        sublist.setSublistValue({
+                              id: 'custitem_qr_code',
+                              line: index,
+                              value: qrCode.toString()
+                        });
+
+
                         index++;
                   }
                   resultIndex = resultIndex + resultStep;
@@ -646,13 +666,13 @@
             xml += '<pdf>';
             xml += '<head>';
             xml += '<meta name="title" value="PRINT LABEL"/>';
-            xml += '<style type="text/css">body {font-family: Arial, sans-serif; font-weight: bold;} table {font-size: 10pt;} td p { align:left }</style>';
+            xml += '<style type="text/css">body {font-family: Arial, sans-serif; font-weight: bold;} table {font-size: 10pt;table-layout: fixed;} td { padding:4px; margin:0px; }</style>';
             xml += '</head>';
 
             var pageSize = getSelectedOption(request, "custpage_pagesize", 1);
             if (pageSize == 1)
               xml += '<body padding="0.25in 0.4in 0.25in 0.4in" size="Letter">';
-            else 
+            else
               xml += '<body padding="0.5in 0.75in 0.5in 0.75in" height="101.6mm" width="152.4mm">';
 
 
@@ -665,7 +685,7 @@
                 if (check == 'T')
                   linesToProcess++;
             }
-            
+           
             // now iterate no the lines and add the relevant selected ones to XML
             for (var invTable = 0; invTable < lineCount; invTable++) {
 
@@ -682,9 +702,12 @@
                 var pdfQuality = request.getSublistValue('custpage_table', 'custitem_quality', invTable);
                 var pdfContent = request.getSublistValue('custpage_table', 'custitem_content', invTable);
                 var programSize = request.getSublistValue('custpage_table', 'custitem_program_sizes', invTable);
+                var qrCode = request.getSublistValue('custpage_table', 'custitem_qr_code', invTable) == 'true';
+
+
                 if (!programSize || programSize === "Other")
                   programSize = '';
-                
+               
                 if (labelType == "ER")
                   xml += '<table border="1" cellpadding="8px" style="width: 400px;padding:15px;">';
                 else {
@@ -696,15 +719,15 @@
                   if (linesProcessed % 2 == 0)
                     xml += '<tr style="padding-top:10px">';
 
-                  xml += '<td><table border="1" cellpadding="6px" style="width: 340px">';
+                  xml += '<td><table border="1" cellpadding="4px" style="width: 340px">';
                 }
 
                 xml += '<tr>';
-                
+               
                 if (labelType == "ER")
-                  xml += '<td style="width: 160px;">';
+                  xml += '<td colspan="2" style="width: 150px;">';
                 else
-                  xml += '<td style="width: 120px;padding:0px; margin:0px">';
+                  xml += '<td colspan="2" style="width: 120px;">';
 
                 if (labelType == "ER")
                   xml += '<p><img src="https://4951235.app.netsuite.com/core/media/media.nl?id=2106&amp;c=4951235&amp;h=ece9007b3f17bf2cc27c" style="width: 140px; height: 20px;" /></p><p style="font-size: 6pt;">WWW.EXQUISITERUGS.COM</p>';
@@ -713,48 +736,71 @@
 
                 xml += '</td>';
 
+                // barcode takes 2 rows
                 if (labelType == "ER")
-                  xml += '<td rowspan="2" style="width: 200px; margin-top: 0px; margin-bottom: 0px; font-size: 48pt;text-align: center;">';
+                  xml += '<td colspan="3" rowspan="2" style="width: 225px; font-size: 42pt;text-align: center;">';
                 else
-                  xml += '<td rowspan="2" style="width: 200px; font-size: 26pt;text-align: center;">';
+                  xml += '<td colspan="3" rowspan="2" style="width: 180px;font-size: 26pt;text-align: center;">';
 
                 xml += '<p style="text-align: center;">' + pdfSerialNo + '<barcode bar-width="2" codetype="code128" showtext="false" value="' + pdfSerialNo + '"></barcode></p>';
+         
                 xml += '</td>';
                 xml += '</tr>';
 
                 if (labelType == "ER") {
 
                   xml += '<tr>';
-                  xml += '<td>';
-                  xml += '<p>DESIGN: <span style="font-size: 26pt"><strong>'  + pdfDesignLabel + '</strong></span></p>';
+                  xml += '<td colspan="2">';
+
+                  if (pdfDesignLabel == 'ASSRT')
+                    xml += '<p>DESIGN: <span style="font-size: 18pt;line-height:18px;"><strong>'  + pdfDesignLabel + '</strong></span></p>';
+                  else
+                    xml += '<p>DESIGN: <span style="font-size: 24pt;line-height:24px;"><strong>'  + pdfDesignLabel + '</strong></span></p>';
+
+                 
                   xml += '</td>';
                   xml += '</tr>';
 
-                  xml += getXMLRow('SIZE', pdfSize, 'font-size:15pt');
-                  xml += getXMLRow('COLLECTION', pdfCollection, 'font-size:18pt');
-                  xml += getXMLRow('ORIGIN', pdfExqRugsOrigin, 'font-size:15pt');
+
+                  xml += getXMLRow('SIZE', pdfSize, 5,'font-size:16pt;');
+
+                  xml += (pdfCollection.length < 12) ?
+                    getXMLRow('COLLECTION', pdfCollection, 5, 'font-size:30pt;line-height:18px;') :
+                    getXMLRow('COLLECTION', pdfCollection, 5, 'font-size:18pt;line-height:18px;');
+
+                  row = getXMLCell('CONTENT', pdfContent, 4, 'font-size:10pt;line-height:10px;');
+                  row += getQRCode( pdfDesignLabel, 40, qrCode );
+                  xml += toXMLRow(row);
+                  xml += getXMLRow('ORIGIN', pdfExqRugsOrigin, 4, 'font-size:10pt;line-height:10px;');
                   xml += '</table>';
 
                   if (pageSize == 1)
                     xml += '<p style="width:100%;border-top:1px dotted #999;margin:15px 0"></p>';
                 }
                 else {
-                    xml += getXMLRow('DESIGN', pdfDesignLabel, 'font-size:18pt');
-                    xml += getXMLRow('COLLECTION', pdfCollection);
-                    xml += getXMLRow('CONTENT', pdfContent);
-                    xml += getXMLRow('ORIGIN', pdfExqRugsOrigin);
-                    xml += getXMLRow('SIZES', programSize, 'font-size:10pt');
+                    xml += getXMLRow('DESIGN', pdfDesignLabel, 3,'font-size:18pt');
+
+                    xml += getXMLRow('COLLECTION', pdfCollection,5);
+
+                    row = getXMLCell('CONTENT', pdfContent,4);
+                    row += getQRCode( pdfDesignLabel, 40, qrCode );
+                    xml += toXMLRow(row);
+                    xml += getXMLRow('ORIGIN', pdfExqRugsOrigin,4);
+                    
+                    xml += getXMLRow('SIZES', programSize, 5,'font-size:10pt');
+   
+
                     xml += '</table></td>';
 
 
-                  // extrnal table tags
-                  // wrap every 2 in a row
-                  if (linesProcessed % 2 == 1 || linesProcessed == linesToProcess - 1)
-                    xml += '</tr>';
+                    // extrnal table tags
+                    // wrap every 2 in a row
+                    if (linesProcessed % 2 == 1 || linesProcessed == linesToProcess - 1)
+                      xml += '</tr>';
 
-                  // last element - close the table
-                  if (linesProcessed == linesToProcess - 1)
-                    xml += '</table>';
+                    // last element - close the table
+                    if (linesProcessed == linesToProcess - 1)
+                      xml += '</table>';
                 }
 
                 linesProcessed++;
@@ -782,9 +828,25 @@
             return value;
           }
 
-          function getXMLRow(label, value, style) {
-               return '<tr><td colspan="2"> <p>' + label + ': <span style="'+(style ? style : '')+'">' + (value ? value : '') + '</span></p></td></tr>';
+          function getQRCode(pdfDesignLabel, dim, qrCode) {
+            if (qrCode)
+              return '<td colspan="1" rowspan="2"> <p>' + '<img alt="" src="http://4951235-sb1.shop.netsuite.com/c.4951235_SB1/QRCODE/' + pdfDesignLabel + '.png" style="width: '+ dim +'px; height: '+ dim +'px;" /></p></td>';
+            else
+              return '<td colspan="1" rowspan="2"> </td>';
           }
+
+          function getXMLRow(label, value, colspan, style) {
+            return toXMLRow(getXMLCell(label, value, colspan, style));
+          }
+
+          function getXMLCell(label, value, colspan, style) {
+            return '<td colspan="'+colspan+'">' + label + ': <span style="'+(style ? style : '')+'">' + (value ? value : '') + '</span></td>';
+          }
+
+          function toXMLRow(value) {
+            return '<tr>' + value + "</tr>";
+          }
+
 
           function hasValue(value) {
             return value && value != '0';
