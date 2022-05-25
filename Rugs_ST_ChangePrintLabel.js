@@ -142,7 +142,7 @@
 
                           sublist.addField({
                               id: 'custitem_country_of_origin',
-                              label: 'Exquisite Rugs - Origin',
+                              label: 'Origin',
                               type: serverWidget.FieldType.TEXT
                           }).updateDisplayType({
                               displayType: serverWidget.FieldDisplayType.INLINE
@@ -150,7 +150,7 @@
 
                           sublist.addField({
                               id: 'custitem_program',
-                              label: 'Exquisite Rugs - Program',
+                              label: 'Program',
                               type: serverWidget.FieldType.TEXT
                           }).updateDisplayType({
                               displayType: serverWidget.FieldDisplayType.INLINE
@@ -158,7 +158,7 @@
 
                           sublist.addField({
                               id: 'custitem_content',
-                              label: 'Exquisite Rugs - Content',
+                              label: 'Content',
                               type: serverWidget.FieldType.TEXT
                           }).updateDisplayType({
                               displayType: serverWidget.FieldDisplayType.INLINE
