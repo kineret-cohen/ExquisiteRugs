@@ -209,7 +209,7 @@
                               label: 'Collection',
                               type: serverWidget.FieldType.TEXT
                           }).updateDisplayType({
-                              displayType: serverWidget.FieldDisplayType.HIDDEN
+                              displayType: serverWidget.FieldDisplayType.INLINE
                           });
 
                           sublist.addField({
