@@ -28,6 +28,7 @@ define (["N/record" , "N/search", "N/runtime"] ,
 	        	var baleNo = newRecord.getValue('custrecord_aecc_bale_number');
                 var eta = newRecord.getValue('custrecord_aecc_eta');
                 var memo = newRecord.getValue('custrecord_aecc_memo');
+                var allocated = newRecord.getValue('custrecord_allocated_sn');
 
 
                 var area = (forceParseInt(widthFeet) + (forceParseInt(widthInches) / 12)) * (forceParseInt(lengthFeet) + (forceParseInt(lengthInches) / 12));
@@ -46,6 +47,7 @@ define (["N/record" , "N/search", "N/runtime"] ,
 	                    custitemnumber_aecc_batch_no: batchNo,
 	                    custitemnumber_aecc_bale_number: baleNo,
                         custitemnumber_aecc_eta: eta,
+                        custitemnumber_allocated_item_number: allocated,
                         memo: memo,
 	                    custitemnumber_aecc_area: area.toFixed(2)
 	                }
