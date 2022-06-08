@@ -819,6 +819,7 @@
           }
 
 
+
           function getSelectedOption(request, optionName, defaultValue) {
             var value = defaultValue;
             try {
@@ -829,8 +830,11 @@
           }
 
           function getQRCode(pdfDesignLabel, dim, qrCode) {
-            if (qrCode)
-              return '<td colspan="1" rowspan="2"> <p>' + '<img alt="" src="http://4951235-sb1.shop.netsuite.com/c.4951235_SB1/QRCODE/' + pdfDesignLabel + '.png" style="width: '+ dim +'px; height: '+ dim +'px;" /></p></td>';
+            if (qrCode) {
+              var fileObj = file.load({id: 'Web Site Hosting Files/Live Hosting Files/QRCODE/' +  pdfDesignLabel + '.png'}).getContents();
+              return '<td colspan="1" rowspan="2"> <p>' + '<img src=\"data:image/png;base64,' + fileObj + '\" style="width: ' + dim + 'px; height: ' + dim + 'px;" /></p></td>';
+            }
+
             else
               return '<td colspan="1" rowspan="2"> </td>';
           }
