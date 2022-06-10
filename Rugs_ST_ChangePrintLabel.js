@@ -4,6 +4,10 @@
    */
   define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', 'N/url', 'N/https', 'N/task', 'N/format', 'N/runtime', 'N/file'],
       function(serverWidget, record, search, redirect, render, url, https, task, format, runtime, file) {
+          
+          var PAGE_SIZE_LETTER = 1;
+          var PAGE_SIZE_UPS = 2;
+
           function onRequest(context) {
 
               try {
@@ -670,7 +674,7 @@
             xml += '</head>';
 
             var pageSize = getSelectedOption(request, "custpage_pagesize", 1);
-            if (pageSize == 1)
+            if (pageSize == PAGE_SIZE_LETTER)
               xml += '<body padding="0.25in 0.4in 0.25in 0.4in" size="Letter">';
             else
               xml += '<body padding="0.5in 0.75in 0.5in 0.75in" height="101.6mm" width="152.4mm">';
@@ -702,7 +706,8 @@
                 var pdfQuality = request.getSublistValue('custpage_table', 'custitem_quality', invTable);
                 var pdfContent = request.getSublistValue('custpage_table', 'custitem_content', invTable);
                 var programSize = request.getSublistValue('custpage_table', 'custitem_program_sizes', invTable);
-                var qrCode = request.getSublistValue('custpage_table', 'custitem_qr_code', invTable) == 'true';
+                var qrCode = pageSize == PAGE_SIZE_LETTER ?
+                    request.getSublistValue('custpage_table', 'custitem_qr_code', invTable) == 'true' : false;
 
 
                 if (!programSize || programSize === "Other")
@@ -724,20 +729,20 @@
 
                 xml += '<tr>';
                
-                if (labelType == "ER")
+                if (labelType == "ER") {
                   xml += '<td colspan="2" style="width: 150px;">';
-                else
-                  xml += '<td colspan="2" style="width: 120px;">';
-
-                if (labelType == "ER")
                   xml += '<p><img src="https://4951235.app.netsuite.com/core/media/media.nl?id=2106&amp;c=4951235&amp;h=ece9007b3f17bf2cc27c" style="width: 140px; height: 20px;" /></p><p style="font-size: 6pt;">WWW.EXQUISITERUGS.COM</p>';
-                else
+                }
+                else {
+                  xml += '<td colspan="2" style="width: 120px;">';
                   xml += '<img src="https://4951235.app.netsuite.com/core/media/media.nl?id=10998&amp;c=4951235&amp;h=qD1ob0v4w04aBj-z-4MzzsdBLhLSfUneQKTXYyKSO0G5tp2-" style="width: 120px; height: 20px;" />';
 
+                }
+                  
                 xml += '</td>';
 
                 // barcode takes 2 rows
-                if (labelType == "ER")
+                if (labelType == "ER" && pageSize == PAGE_SIZE_LETTER)
                   xml += '<td colspan="3" rowspan="2" style="width: 225px; font-size: 42pt;text-align: center;">';
                 else
                   xml += '<td colspan="3" rowspan="2" style="width: 180px;font-size: 26pt;text-align: center;">';
@@ -764,7 +769,7 @@
 
                   xml += getXMLRow('SIZE', pdfSize, 5,'font-size:16pt;');
 
-                  xml += (pdfCollection.length < 12) ?
+                  xml += (pdfCollection.length < 12 && pageSize == PAGE_SIZE_LETTER) ?
                     getXMLRow('COLLECTION', pdfCollection, 5, 'font-size:30pt;line-height:18px;') :
                     getXMLRow('COLLECTION', pdfCollection, 5, 'font-size:18pt;line-height:18px;');
 
@@ -774,7 +779,7 @@
                   xml += getXMLRow('ORIGIN', pdfExqRugsOrigin, 4, 'font-size:10pt;line-height:10px;');
                   xml += '</table>';
 
-                  if (pageSize == 1)
+                  if (pageSize == PAGE_SIZE_LETTER)
                     xml += '<p style="width:100%;border-top:1px dotted #999;margin:15px 0"></p>';
                 }
                 else {
