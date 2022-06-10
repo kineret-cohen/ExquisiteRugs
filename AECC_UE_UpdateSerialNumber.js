@@ -3,6 +3,10 @@
  * @NApiVersion 2.x
  * @NScriptType userEventScript
  * @NModuleScope Public
+ *
+ *06.09.22 Kineret Cohen
+ * 1.Add a new Field to map :custrecord_allocated_sn
+ * 2. Changed the code so we don't need to map all the fileds when we need to map only partial.  
  */
 
 define (["N/record" , "N/search", "N/runtime"] ,
@@ -33,24 +37,30 @@ define (["N/record" , "N/search", "N/runtime"] ,
 
                 var area = (forceParseInt(widthFeet) + (forceParseInt(widthInches) / 12)) * (forceParseInt(lengthFeet) + (forceParseInt(lengthInches) / 12));
 
+
+                var newValues = {};
+                assignIfNoEmpty(newValues, "custitemnumber_aecc_width_feet", widthFeet);
+                assignIfNoEmpty(newValues, "custitemnumber_aecc_width_inches", widthInches);
+                assignIfNoEmpty(newValues, "custitemnumber_aecc_length_feet", lengthFeet);
+                assignIfNoEmpty(newValues, "custitemnumber_aecc_length_inches", lengthInches);
+                assignIfNoEmpty(newValues, "custitemnumber_aecc_batch_no", batchNo);
+                assignIfNoEmpty(newValues, "custitemnumber_aecc_bale_number", baleNo);
+                assignIfNoEmpty(newValues, "custitemnumber_aecc_eta", eta);
+                assignIfNoEmpty(newValues, "custitemnumber_allocated_item_number", allocated);
+                assignIfNoEmpty(newValues, "memo", memo);
+                assignIfNoEmpty(newValues, "custitemnumber_aecc_area", area.toFixed(2));
+
+
+                log.error('new values', JSON.stringify(newValues));
+              
+
 	        	log.debug(title, 'snId = ' + snId);
 	        	log.debug(title, 'widthFeet = ' + widthFeet + ' | widthInches = ' + widthInches + ' | lengthFeet = ' + lengthFeet + ' | lengthInches = ' + lengthInches + ' | batchNo = ' + batchNo + ' | baleNo = ' + baleNo + ' | area = ' + area);
 
 	        	var serialNumberID = record.submitFields({
 	                type: 'inventorynumber',
 	                id: snId,
-	                values: {
-	                    custitemnumber_aecc_width_feet: widthFeet,
-	                    custitemnumber_aecc_width_inches: widthInches,
-	                    custitemnumber_aecc_length_feet: lengthFeet,
-	                    custitemnumber_aecc_length_inches: lengthInches,
-	                    custitemnumber_aecc_batch_no: batchNo,
-	                    custitemnumber_aecc_bale_number: baleNo,
-                        custitemnumber_aecc_eta: eta,
-                        custitemnumber_allocated_item_number: allocated,
-                        memo: memo,
-	                    custitemnumber_aecc_area: area.toFixed(2)
-	                }
+	                values: newValues
 	            });
 
 	            log.debug(title, serialNumberID);
@@ -60,6 +70,11 @@ define (["N/record" , "N/search", "N/runtime"] ,
             	log.error(title, error.toString());
         	}
         	log.debug(title, '------ END -----------');
+    	}
+
+    	function assignIfNoEmpty(map, key, value) {
+    		if (value !== null && value !== '')
+            	map[key] = value;
     	}
 
 	    function searchAll ( objSavedSearch ) 
