@@ -2,8 +2,8 @@
    * @NApiVersion 2.x
    * @NScriptType Suitelet
    */
-  define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', 'N/url', 'N/https', 'N/task', 'N/format', 'N/runtime', 'N/file'],
-      function(serverWidget, record, search, redirect, render, url, https, task, format, runtime, file) {
+  define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', 'N/url', 'N/https', 'N/task', 'N/format', 'N/runtime', 'N/file', 'N/compress'],
+      function(serverWidget, record, search, redirect, render, url, https, task, format, runtime, file, compress) {
           
           var PAGE_SIZE_LETTER = 1;
           var PAGE_SIZE_UPS = 2;
@@ -419,6 +419,7 @@
               }
           }
 
+
           function getSerialNumbersByDocType(documentType, getFromDoc) {
               var serialNumbersByDocType = [];
               var transFilter = [];
@@ -662,9 +663,77 @@
           function returnLabel(context) {
             var request = context.request;
 
-            // set label base on type
+            // get PDF format options
             var labelType = request.parameters["custpage_labeltype"];
+            var pageSize = getSelectedOption(request, "custpage_pagesize", 1);
 
+            // first extract only lines that user selected
+            var lineCount = request.getLineCount('custpage_table');
+            var items = [];
+            for (var i = 0; i < lineCount; i++) {
+
+              var check = request.getSublistValue('custpage_table', 'checkbox', i);
+                if (check != 'T')
+                  continue;
+
+                var item = {
+                  pdfSerialNo : request.getSublistValue('custpage_table', 'serialnumber', i),
+                  pdfDesignLabel : request.getSublistValue('custpage_table', 'custitem_er_label_design', i),
+                  pdfSize : request.getSublistValue('custpage_table', 'custitem14', i),
+                  pdfExqRugsOrigin : request.getSublistValue('custpage_table', 'custitem_country_of_origin', i),
+                  pdfCollection : request.getSublistValue('custpage_table', 'custitem_collection', i),
+                  pdfQuality : request.getSublistValue('custpage_table', 'custitem_quality', i),
+                  pdfContent : request.getSublistValue('custpage_table', 'custitem_content', i),
+                  labelType: labelType,
+                  programSize : request.getSublistValue('custpage_table', 'custitem_program_sizes', i),
+                  qrCode : pageSize == PAGE_SIZE_LETTER ?
+                    request.getSublistValue('custpage_table', 'custitem_qr_code', i) == 'true' : false
+                };
+
+                if (!item.programSize || item.programSize === "Other")
+                  item.programSize = '';
+
+                
+                items.push(item);
+            }
+
+
+
+            // now we limit to up to 50 elements per PDF (otherwise the PDF becomes too big and fails)
+            var pdfFiles = [];
+            var nextBatch = 0;
+            while (nextBatch <= items.length) {
+              addPDF(pageSize, items, nextBatch, 20, pdfFiles);
+              nextBatch+=20;
+            }
+
+            // one file we return as is, mulitlpe we zip into 1 file
+            var streamFile = pdfFiles[0];
+            if (pdfFiles.length > 1) {
+              var archiver = compress.createArchiver();
+              for (var i=0; i < pdfFiles.length; i++) 
+                archiver.add({
+                    file: pdfFiles[i]
+                });
+
+                streamFile = archiver.archive({
+                    name: 'export.zip'
+                });
+            }
+
+            context.response.writeFile(streamFile);
+          }
+
+
+          function addPDF(pageSize, items, startIndex, length, pdfFiles) {
+
+            var scriptObj = runtime.getCurrentScript();
+            log.error({
+                title: "Remaining usage units (before): ",
+                details: scriptObj.getRemainingUsage()
+            });
+
+            
             var xml = '<?xml version="1.0" encoding=\"UTF-8\"?>\n<!DOCTYPE pdf PUBLIC "-//big.faceless.org//report" "report-1.1.dtd">\n';
             xml += '<pdfset>';
             xml += '<pdf>';
@@ -673,47 +742,22 @@
             xml += '<style type="text/css">body {font-family: Arial, sans-serif; font-weight: bold;} table {font-size: 10pt;table-layout: fixed;} td { padding:4px; margin:0px; }</style>';
             xml += '</head>';
 
-            var pageSize = getSelectedOption(request, "custpage_pagesize", 1);
             if (pageSize == PAGE_SIZE_LETTER)
               xml += '<body padding="0.25in 0.4in 0.25in 0.4in" size="Letter">';
             else
               xml += '<body padding="0.5in 0.75in 0.5in 0.75in" height="101.6mm" width="152.4mm">';
 
-
-            // first check how many selected lines exist
-            var lineCount = request.getLineCount('custpage_table');
-            var linesToProcess = 0;
             var linesProcessed = 0;
-            for (var invTable = 0; invTable < lineCount; invTable++) {
-              var check = request.getSublistValue('custpage_table', 'checkbox', invTable);
-                if (check == 'T')
-                  linesToProcess++;
-            }
-           
-            // now iterate no the lines and add the relevant selected ones to XML
-            for (var invTable = 0; invTable < lineCount; invTable++) {
+            var labelType = '';
+            length = (startIndex + length) < items.length ? length : items.length - startIndex;
 
-                // ignore rows which were not selected
-                var check = request.getSublistValue('custpage_table', 'checkbox', invTable);
-                if (check != 'T')
-                  continue;
+            // iterate on the items and add to XML
+            for (var i = startIndex; i < startIndex+length; i++) {
 
-                var pdfSerialNo = request.getSublistValue('custpage_table', 'serialnumber', invTable);
-                var pdfDesignLabel = request.getSublistValue('custpage_table', 'custitem_er_label_design', invTable);
-                var pdfSize = request.getSublistValue('custpage_table', 'custitem14', invTable);
-                var pdfExqRugsOrigin = request.getSublistValue('custpage_table', 'custitem_country_of_origin', invTable);
-                var pdfCollection = request.getSublistValue('custpage_table', 'custitem_collection', invTable);
-                var pdfQuality = request.getSublistValue('custpage_table', 'custitem_quality', invTable);
-                var pdfContent = request.getSublistValue('custpage_table', 'custitem_content', invTable);
-                var programSize = request.getSublistValue('custpage_table', 'custitem_program_sizes', invTable);
-                var qrCode = pageSize == PAGE_SIZE_LETTER ?
-                    request.getSublistValue('custpage_table', 'custitem_qr_code', invTable) == 'true' : false;
-
-
-                if (!programSize || programSize === "Other")
-                  programSize = '';
+                var item = items[i];
+                labelType = item.labelType;
                
-                if (labelType == "ER")
+                if (item.labelType == "ER")
                   xml += '<table border="1" cellpadding="8px" style="width: 400px;padding:15px;">';
                 else {
                   // extrenal table to create 2 columns
@@ -729,7 +773,7 @@
 
                 xml += '<tr>';
                
-                if (labelType == "ER") {
+                if (item.labelType == "ER") {
                   xml += '<td colspan="2" style="width: 150px;">';
                   xml += '<p><img src="https://4951235.app.netsuite.com/core/media/media.nl?id=2106&amp;c=4951235&amp;h=ece9007b3f17bf2cc27c" style="width: 140px; height: 20px;" /></p><p style="font-size: 6pt;">WWW.EXQUISITERUGS.COM</p>';
                 }
@@ -742,57 +786,57 @@
                 xml += '</td>';
 
                 // barcode takes 2 rows
-                if (labelType == "ER" && pageSize == PAGE_SIZE_LETTER)
+                if (item.labelType == "ER" && pageSize == PAGE_SIZE_LETTER)
                   xml += '<td colspan="3" rowspan="2" style="width: 225px; font-size: 42pt;text-align: center;">';
                 else
                   xml += '<td colspan="3" rowspan="2" style="width: 180px;font-size: 26pt;text-align: center;">';
 
-                xml += '<p style="text-align: center;">' + pdfSerialNo + '<barcode bar-width="2" codetype="code128" showtext="false" value="' + pdfSerialNo + '"></barcode></p>';
+                xml += '<p style="text-align: center;">' + item.pdfSerialNo + '<barcode bar-width="2" codetype="code128" showtext="false" value="' + item.pdfSerialNo + '"></barcode></p>';
          
                 xml += '</td>';
                 xml += '</tr>';
 
-                if (labelType == "ER") {
+                if (item.labelType == "ER") {
 
                   xml += '<tr>';
                   xml += '<td colspan="2">';
 
-                  if (pdfDesignLabel == 'ASSRT')
-                    xml += '<p>DESIGN: <span style="font-size: 18pt;line-height:18px;"><strong>'  + pdfDesignLabel + '</strong></span></p>';
+                  if (item.pdfDesignLabel == 'ASSRT')
+                    xml += '<p>DESIGN: <span style="font-size: 18pt;line-height:18px;"><strong>'  + item.pdfDesignLabel + '</strong></span></p>';
                   else
-                    xml += '<p>DESIGN: <span style="font-size: 24pt;line-height:24px;"><strong>'  + pdfDesignLabel + '</strong></span></p>';
+                    xml += '<p>DESIGN: <span style="font-size: 24pt;line-height:24px;"><strong>'  + item.pdfDesignLabel + '</strong></span></p>';
 
                  
                   xml += '</td>';
                   xml += '</tr>';
 
 
-                  xml += getXMLRow('SIZE', pdfSize, 5,'font-size:16pt;');
+                  xml += getXMLRow('SIZE', item.pdfSize, 5,'font-size:16pt;');
 
-                  xml += (pdfCollection.length < 12 && pageSize == PAGE_SIZE_LETTER) ?
-                    getXMLRow('COLLECTION', pdfCollection, 5, 'font-size:30pt;line-height:18px;') :
-                    getXMLRow('COLLECTION', pdfCollection, 5, 'font-size:18pt;line-height:18px;');
+                  xml += (item.pdfCollection.length < 12 && pageSize == PAGE_SIZE_LETTER) ?
+                    getXMLRow('COLLECTION', item.pdfCollection, 5, 'font-size:30pt;line-height:18px;') :
+                    getXMLRow('COLLECTION', item.pdfCollection, 5, 'font-size:18pt;line-height:18px;');
 
-                  row = getXMLCell('CONTENT', pdfContent, 4, 'font-size:10pt;line-height:10px;');
-                  row += getQRCode( pdfDesignLabel, 40, qrCode );
+                  row = getXMLCell('CONTENT', item.pdfContent, 4, 'font-size:10pt;line-height:10px;');
+                  row += getQRCode( item.pdfDesignLabel, 40, item.qrCode );
                   xml += toXMLRow(row);
-                  xml += getXMLRow('ORIGIN', pdfExqRugsOrigin, 4, 'font-size:10pt;line-height:10px;');
+                  xml += getXMLRow('ORIGIN', item.pdfExqRugsOrigin, 4, 'font-size:10pt;line-height:10px;');
                   xml += '</table>';
 
                   if (pageSize == PAGE_SIZE_LETTER)
                     xml += '<p style="width:100%;border-top:1px dotted #999;margin:15px 0"></p>';
                 }
                 else {
-                    xml += getXMLRow('DESIGN', pdfDesignLabel, 3,'font-size:18pt');
+                    xml += getXMLRow('DESIGN', item.pdfDesignLabel, 3,'font-size:18pt');
 
-                    xml += getXMLRow('COLLECTION', pdfCollection,5);
+                    xml += getXMLRow('COLLECTION', item.pdfCollection,5);
 
-                    row = getXMLCell('CONTENT', pdfContent,4);
-                    row += getQRCode( pdfDesignLabel, 40, qrCode );
+                    row = getXMLCell('CONTENT', item.pdfContent,4);
+                    row += getQRCode( item.pdfDesignLabel, 40, item.qrCode );
                     xml += toXMLRow(row);
-                    xml += getXMLRow('ORIGIN', pdfExqRugsOrigin,4);
+                    xml += getXMLRow('ORIGIN', item.pdfExqRugsOrigin,4);
                     
-                    xml += getXMLRow('SIZES', programSize, 5,'font-size:10pt');
+                    xml += getXMLRow('SIZES', item.programSize, 5,'font-size:10pt');
    
 
                     xml += '</table></td>';
@@ -800,11 +844,11 @@
 
                     // extrnal table tags
                     // wrap every 2 in a row
-                    if (linesProcessed % 2 == 1 || linesProcessed == linesToProcess - 1)
+                    if (linesProcessed % 2 == 1 || linesProcessed == length - 1)
                       xml += '</tr>';
 
                     // last element - close the table
-                    if (linesProcessed == linesToProcess - 1)
+                    if (linesProcessed == length - 1)
                       xml += '</table>';
                 }
 
@@ -814,15 +858,29 @@
             xml += '</body></pdf>';
             xml += '</pdfset>';
 
+
+            log.error({
+                title: "Remaining usage units (after " + startIndex + ")",
+                details: scriptObj.getRemainingUsage()
+            });
+
+
+
             // rendered the XML as PDF
             var renderer = render.create();
             renderer.templateContent = xml;
             var newfile = renderer.renderAsPdf();
-            var dateFormat = GetDateFormat();
-            newfile.name = labelType + "_Label_" + dateFormat + ".pdf";
-            context.response.writeFile(newfile);
-          }
 
+            log.error({
+                title: "Remaining usage units (" + startIndex + ")",
+                details: scriptObj.getRemainingUsage()
+            });
+
+            var dateFormat = GetDateFormat();
+            newfile.name = labelType + "_Label_" + startIndex + "_" + dateFormat + ".pdf";
+
+            pdfFiles.push(newfile);
+          }
 
 
           function getSelectedOption(request, optionName, defaultValue) {
