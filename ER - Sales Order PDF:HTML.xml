@@ -119,19 +119,13 @@ td p { align:left }
 </#if><tr>
 	<td align="center" colspan="3" line-height="150%" style="width: 43.5px;">${item.quantity}</td>
 	<td colspan="12" style="width: 128px;"><span style="font-weight: bold; line-height: 150%; color: #333333;">${item.item}</span><br />${item.description}</td>
-	<td style="width: 114px;">${item.quantitycommitted}</td>
-	<td style="width: 75px;">${item.custcol_category_size}</td>
-<#if  item.custcol_category_size?has_content && item.quantitycommitted  == 0 >
-    <#if item.custcol_category_size != "SAMPLE"  && item.custcol_category_size != "SPECIAL ORDER SIZE" && item.custcol_category_size != "ORDER SIZE" && item.custcol_category_size != "2'X3'" && item.custcol_category_size != "1'X1'6\""  >
-     <td>Backorder</td>
-    <#else>
-          <td style="width: 75px;"></td>
-   </#if>
- <#elseif item.quantitycommitted  == 0>   
-        <td style="width: 75px;">--</td>
-   <#else>
-             <td style="width: 75px;"></td>                   
-     </#if>
+	<td style="width: 114px;">${item.custcol_so_shipping_date}</td>
+	<td style="width: 75px;">${item.custcol_actual_size}</td>
+<#if item.quantitycommitted  == 0  && ( item.custcol_category_size != "SAMPLE"  && item.custcol_category_size != "SPECIAL ORDER SIZE" && item.custcol_category_size != "ORDER SIZE" && item.custcol_category_size != "2'X3'" && item.custcol_category_size != "1'X1'6\"" ) >
+<td>Backorder</td>
+<#else>
+<td style="width: 75px;"></td>
+</#if>
 	<td style="width: 53px;">${item.custcol_aecc_rate}</td>
 	<td align="right" colspan="5" style="width: 81px;">${item.rate}</td>
 	<td align="right" colspan="4" style="width: 75px;">${item.amount}</td>
