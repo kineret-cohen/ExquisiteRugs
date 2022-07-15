@@ -103,38 +103,26 @@ td p { align:left }
 </tr></table>
 <#if record.item?has_content>
 
-<table style="width: 667px; margin-top: 10px;"><!-- start items --><#list record.item as item><#if item_index==0>
+<table style="width: 682px; margin-top: 10px;"><!-- start items --><#list record.item as item><#if item_index==0>
 <thead>
 <tr>
 <th align="center" colspan="3" style="padding: 10px 6px; width: 43.5px;">${item.quantity@label}</th>
 <th colspan="12" style="padding: 10px 6px; width: 128px;">${item.item@label}</th>
-<th style="padding: 10px 6px; width: 75px;">Size</th>
 <th style="padding: 10px 6px; width: 114px;">ESD</th>
-<th style="padding: 10px 6px; width: 75px;">Status</th>
+<th style="padding: 10px 6px; width: 75px;">Size</th>
 <th style="padding: 10px 6px; width: 67px;">SQFT Price</th>
-<th align="right" colspan="5" style="padding: 10px 6px; width: 61px;">${item.rate@label}</th>
-<th align="right" colspan="4" style="padding: 10px 6px; width: 78px;">${item.amount@label}</th>
+<th align="right" colspan="5" style="padding: 10px 6px; width: 91px;">${item.rate@label}</th>
+<th align="right" colspan="4" style="padding: 10px 6px; width: 48px;">${item.amount@label}</th>
 </tr>
 </thead>
 </#if><tr>
 <td align="center" colspan="3" line-height="150%" style="width: 43.5px;">${item.quantity}</td>
 <td colspan="12" style="width: 128px;"><span style="font-weight: bold; line-height: 150%; color: #333333;">${item.item}</span><br />${item.description}</td>
-<td style="width: 114px;">${item.custcol_actual_size}</td>
-<td style="width: 75px;">${item.custcol_so_shipping_date}</td>
-<#if item.custcol_category_size != '1\'X1\'6\"' && item.custcol_category_size != "SAMPLE" && item.custcol_category_size != "SPECIAL ORDER SIZE" && item.custcol_category_size != "ORDER SIZE" && item.custcol_category_size != "2'X3'" >
-        <#if item.quantitycommitted  == 0 >
-                <td>Backorder</td>
-        <#elseif item.quantitycommitted - item.quantity != 0 >
-                <td>Partial Backorder</td>
-       <#else>
-                <td style="width: 75px;"></td>
-       </#if>  
-<#else>
-                <td style="width: 75px;"></td>
-</#if>
+<td style="width: 114px;">${item.custcol_so_shipping_date}</td>
+<td style="width: 75px;">${item.custcol_actual_size}</td>
 <td style="width: 67px;">${item.custcol_aecc_rate}</td>
-<td align="right" colspan="5" style="width: 61px;">${item.rate}</td>
-<td align="right" colspan="4" style="width: 78px;">${item.amount}</td>
+<td align="right" colspan="5" style="width: 91px;">${item.rate}</td>
+<td align="right" colspan="4" style="width: 48px;">${item.amount}</td>
 </tr>
 </#list><!-- end items --></table>
 &nbsp;
