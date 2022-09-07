@@ -1,0 +1,80 @@
+/******************************************************************************
+* File Header
+* Script Name: ER UE Check Before Delete Fulfillment
+* Modified : Before Fulfilment reocrd is deleted , we check if it was invoiced
+* Created By: Kineret Cohen  
+********************************************************************************/
+/**
+ * @NApiVersion 2.x
+ * @NScriptType UserEventScript
+ */
+define([ 'N/record', 'N/search', 'N/error' ],
+        function(record, search, error) {
+                function beforeSubmit(context) {
+                if (context.type == context.UserEventType.DELETE) {
+
+                        var record = context.newRecord;  
+
+                        var source = record.getValue({
+                                fieldId : 'createdfrom'
+                        })
+
+                        var source1 = record.getText({
+                                fieldId : 'createdfrom'
+                        })
+
+
+                        var createdFrom = context.newRecord.getValue({fieldId:'createdfrom'});
+if (createdFrom  != null && createdFrom  != '' ) 
+{
+var createdFromType = search.lookupFields({
+type: search.Type.TRANSACTION,
+id:createdFrom,
+columns:['recordtype']
+})['recordtype'];
+log.debug('Transaction Type22 : ' + createdFromType);
+}
+
+
+
+
+                log.debug( 'source: ' + source);
+                  log.debug( 'source1: ' + source1);
+
+                                          var createdFromType = search.lookupFields({
+                                        type : search.Type.TRANSACTION,
+                                        id : source,
+                                        columns : 'recordtype'
+                                });
+
+
+log.debug('Transaction Type : ' + createdFromType);
+
+
+
+                if (source != null) {
+                              log.debug( 'source 2 : ' + source);
+                                var salesOrderStatus = search.lookupFields({
+                                        type : search.Type.SALES_ORDER,
+                                        id : source,
+                                        columns : 'status'
+                                });
+
+// Check the sales order status if it is billed
+                if (salesOrderStatus.status[0].text == 'Billed' || salesOrderStatus.status[0].text == 'Partially Fulfilled') {
+                                var errorObj = error.create({
+                                      code: 'Custom Error Message',
+                                      message: '****** This Sales Order was Invoiced/Partially Invoiced. The Record can not be deleted. ******'
+                                });
+
+                throw errorObj.code + '\n\n' + errorObj.message;
+                return false;
+
+                                }
+                        }
+                }
+        }
+        return {
+                beforeSubmit : beforeSubmit
+        };
+})

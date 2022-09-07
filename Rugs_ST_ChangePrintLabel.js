@@ -709,7 +709,7 @@
 
             // one file we return as is, mulitlpe we zip into 1 file
             var streamFile = pdfFiles[0];
-            if (pdfFiles.length > 1) {
+            if (pdfFiles.length > 10000) {
               var archiver = compress.createArchiver();
               for (var i=0; i < pdfFiles.length; i++) 
                 archiver.add({
@@ -768,7 +768,7 @@
                   if (linesProcessed % 2 == 0)
                     xml += '<tr style="padding-top:10px">';
 
-                  xml += '<td><table border="1" cellpadding="4px" style="width: 340px">';
+                  xml += '<td><table border="1" cellpadding="4px" style="width: 340px; border-style: dotted; border-color:gray;">';
                 }
 
                 xml += '<tr>';
