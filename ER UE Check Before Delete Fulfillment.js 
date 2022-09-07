@@ -19,47 +19,26 @@ define([ 'N/record', 'N/search', 'N/error' ],
                                 fieldId : 'createdfrom'
                         })
 
-                        var source1 = record.getText({
-                                fieldId : 'createdfrom'
-                        })
-
-
-                        var createdFrom = context.newRecord.getValue({fieldId:'createdfrom'});
-if (createdFrom  != null && createdFrom  != '' ) 
-{
-var createdFromType = search.lookupFields({
-type: search.Type.TRANSACTION,
-id:createdFrom,
-columns:['recordtype']
-})['recordtype'];
-log.debug('Transaction Type22 : ' + createdFromType);
-}
-
-
-
-
-                log.debug( 'source: ' + source);
-                  log.debug( 'source1: ' + source1);
-
-                                          var createdFromType = search.lookupFields({
-                                        type : search.Type.TRANSACTION,
-                                        id : source,
-                                        columns : 'recordtype'
-                                });
-
-
-log.debug('Transaction Type : ' + createdFromType);
-
 
 
                 if (source != null) {
-                              log.debug( 'source 2 : ' + source);
                                 var salesOrderStatus = search.lookupFields({
                                         type : search.Type.SALES_ORDER,
                                         id : source,
                                         columns : 'status'
                                 });
 
+
+                                var createdFromType = search.lookupFields({
+                                                      type: search.Type.TRANSACTION,
+                                                      id:source,
+                                                      columns:['recordtype']
+                                                      })['recordtype'];
+
+                             log.debug('Transaction Type : ' + createdFromType);
+
+        
+        if (createdFromType == 'salesorder'){
 // Check the sales order status if it is billed
                 if (salesOrderStatus.status[0].text == 'Billed' || salesOrderStatus.status[0].text == 'Partially Fulfilled') {
                                 var errorObj = error.create({
@@ -73,7 +52,8 @@ log.debug('Transaction Type : ' + createdFromType);
                                 }
                         }
                 }
-        }
+         }  
+      } 
         return {
                 beforeSubmit : beforeSubmit
         };
