@@ -703,13 +703,13 @@
             var pdfFiles = [];
             var nextBatch = 0;
             while (nextBatch <= items.length) {
-              addPDF(pageSize, items, nextBatch, 20, pdfFiles);
-              nextBatch+=20;
+              addPDF(pageSize, items, nextBatch, 1000, pdfFiles);
+              nextBatch+=1000;
             }
 
             // one file we return as is, mulitlpe we zip into 1 file
             var streamFile = pdfFiles[0];
-            if (pdfFiles.length > 10000) {
+            /*if (pdfFiles.length > 1) {
               var archiver = compress.createArchiver();
               for (var i=0; i < pdfFiles.length; i++) 
                 archiver.add({
@@ -719,7 +719,7 @@
                 streamFile = archiver.archive({
                     name: 'export.zip'
                 });
-            }
+            }*/
 
             context.response.writeFile(streamFile);
           }
