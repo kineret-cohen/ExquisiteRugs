@@ -1,11 +1,9 @@
 import argparse, sys
 import pymysql
 import sys
-import os, tempfile
-from pathlib import Path
 import logging
 
-logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S', level=logging.INFO, filename='er_activity.log')
+logging.basicConfig(format='%(asctime)s - %(levelname)s - InventoryImport - %(message)s', datefmt='%d-%b-%y %H:%M:%S', level=logging.INFO, filename='er_activity.log')
 
 class InventoryImport:
   def __init__(self, host, username, password):
