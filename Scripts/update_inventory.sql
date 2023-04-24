@@ -1,8 +1,11 @@
+
+
 drop procedure er_update_inventory;
 
-DELIMITER $$
 
-CREATE PROCEDURE er_update_inventory()
+
+DELIMITER $$
+CREATE PROCEDURE `er_update_inventory`()
 BEGIN
 
 	-- verify we have something to update
@@ -74,12 +77,8 @@ BEGIN
 						case when size  not like '%X%'
 							then  0 else trim(replace(replace(replace(replace(replace(RIGHT(`size`,char_length(`size`)- LOCATE("X", `size`)),'''','.'),'"""',''),'"',''),' ROUND',''),'RUNNER',''))  
 						end as sort_by_size_2,
-						case when  on_loom=0 
-							then 0 else  case when (in_transit+on_loom)-bo > 0 
-													then 1  else 0 
-												end  
-						end as on_loom,
-						curdate() as report_date
+						on_loom,
+						now() as report_date
 						from netsuite_input_stock_sheet_summary_b2b;
                         
                         
@@ -162,11 +161,14 @@ BEGIN
         -- log
 		insert into er_etl_history( timestamp, table_name, rows_updated)
         values(now(), 'er_stage_variation_inventory', ROW_COUNT());
+	
+		-- update studio_library tables
+		truncate studio_library.er_reports;
+    
+		insert into studio_library.er_reports(design, size, category_size, in_stock, in_transit, eta,sort_by_size_1,sort_by_size_2, on_loom, report_date)
+		select design, size, category_size, in_stock, in_transit, eta,sort_by_size_1,sort_by_size_2, on_loom, report_date from rugs.er_reports;
 
 	END IF;
 
 END$$
-
 DELIMITER ;
-
-
