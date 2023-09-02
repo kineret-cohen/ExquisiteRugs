@@ -31,16 +31,18 @@ if __name__ == "__main__":
 
 		# Switch to a remote directory
 		sftp.cwd(args.directory)
+		logging.info("Switch to directory {0} successfully".format(args.directory))
 
 		# upload file
 		sftp.put(args.file, args.file)  # upload file
+		logging.info("Upload file {0} successfully".format(args.file))
 
 		# Obtain structure of the remote directory
-		directory_structure = sftp.listdir_attr()
+		#directory_structure = sftp.listdir_attr()
 
 		# Print all files
-		for attr in directory_structure:
-			logging.info('Found file/folder {0}'.format(attr.filename))
+		#for attr in directory_structure:
+			#logging.info('Found file/folder {0}'.format(attr.filename))
 			#sftp.get(attr.filename, print('output/{0}'.format(os.path.basename(attr.filename))))
 			#sftp.remove('')
 

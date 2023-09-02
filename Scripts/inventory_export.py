@@ -50,8 +50,7 @@ if __name__ == "__main__":
 	inv = InventoryExport(args.consumer_key,args.consumer_secret,args.token,args.token_secret)
 	response = inv.get(args.url, args.realm)
 	logging.info('inventory_export response received')
-
-	#data = json.loads('{"fromPage":"0","pages":1,"results":[{"sku":"101000214","quantity":0},{"sku":"121000215","quantity":0}]}')
+	
 	data = json.loads(response.text)
 	inv.toCSV(data['results'], args.with_header)
 	logging.info('inventory_export completed')
