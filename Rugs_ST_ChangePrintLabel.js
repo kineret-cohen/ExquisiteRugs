@@ -247,6 +247,13 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
                         }).updateDisplayType({
                             displayType: serverWidget.FieldDisplayType.INLINE
                         });
+                        sublist.addField({
+                            id: 'custitem_met',
+                            label: 'MET',
+                            type: serverWidget.FieldType.TEXT
+                        }).updateDisplayType({
+                            displayType: serverWidget.FieldDisplayType.INLINE
+                        });
 
 
 
@@ -369,6 +376,11 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
                                 join: "item",
                                 label: "UPC Code"
                             }));
+                            invNumColumn.push(search.createColumn({
+                                name: "custitem_met",
+                                join: "item",
+                                label: "ER - Met Desc"
+                            }));
 
                             log.debug("invNumSearch", invNumSearch);
 
@@ -407,6 +419,12 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
                             text: "UPC Code",
                             isSelected: formLabelType == "UPC"
                         });
+                        labelType.addSelectOption({
+                            value: "MET",
+                            text: "MET",
+                            isSelected: formLabelType == "MET"
+                        });
+
 
                         var pageSize = form.addField({
                             id: 'custpage_pagesize',
@@ -579,6 +597,7 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
                     var programSize = invNumSearchResult[i].getText(invNumSearchColObj.columns[13]);
                     var qrCode = invNumSearchResult[i].getValue(invNumSearchColObj.columns[14]);
                     var upcCode = invNumSearchResult[i].getValue(invNumSearchColObj.columns[15]);
+                    var metDesc = invNumSearchResult[i].getValue(invNumSearchColObj.columns[16]);
 
                     // convert the dimensions to size label
                     var size = '';
@@ -679,6 +698,14 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
                         });
                     }
 
+                    if (metDesc) {
+                        sublist.setSublistValue({
+                            id: 'custitem_met',
+                            line: index,
+                            value: metDesc
+                        });
+                    }
+
                     index++;
                 }
                 resultIndex = resultIndex + resultStep;
@@ -708,6 +735,7 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
                     pdfCollection: request.getSublistValue('custpage_table', 'custitem_collection', i),
                     pdfQuality: request.getSublistValue('custpage_table', 'custitem_quality', i),
                     pdfContent: request.getSublistValue('custpage_table', 'custitem_content', i),
+                    pdfMet: request.getSublistValue('custpage_table', 'custitem_met', i),
                     labelType: labelType,
                     programSize: request.getSublistValue('custpage_table', 'custitem_program_sizes', i),
                     qrCode: pageSize == PAGE_SIZE_LETTER ?
@@ -717,14 +745,18 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
                 if (!item.programSize || item.programSize === "Other")
                     item.programSize = '';
 
+                if (!item.pdfMet)
+                    item.pdfMet = "";
+
                 // choose what data we will use for barcode
-                if (item.labelType == "ER")
+                if (item.labelType == "ER" || item.labelType == "MET")
                     item.barCode = request.getSublistValue('custpage_table', 'serialnumber', i);
                 else if (item.labelType == "SL")
                     item.barCode = request.getSublistValue('custpage_table', 'item', i);
                 else
 
                     item.barCode = request.getSublistValue('custpage_table', 'custitem_new_upc_code', i);
+
 
                 items.push(item);
             }
@@ -759,13 +791,6 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
 
         function addPDF(pageSize, items, startIndex, length, pdfFiles) {
 
-            var scriptObj = runtime.getCurrentScript();
-            log.error({
-                title: "Remaining usage units (before): ",
-                details: scriptObj.getRemainingUsage()
-            });
-
-
             var xml = '<?xml version="1.0" encoding=\"UTF-8\"?>\n<!DOCTYPE pdf PUBLIC "-//big.faceless.org//report" "report-1.1.dtd">\n';
             xml += '<pdfset>';
             xml += '<pdf>';
@@ -791,6 +816,8 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
 
                 if (item.labelType == "ER" || item.labelType == "UPC")
                     xml += '<table border="1" cellpadding="8px" style="width: 400px;padding:15px; border-style: dotted;">';
+                else if (item.labelType == "MET")
+                    xml += '<table border="1" cellpadding="2px" style="width: 400px;padding:15px; border-style: dotted;">';
                 else {
                     // extrenal table to create 2 columns
                     if (linesProcessed == 0)
@@ -803,7 +830,7 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
                     xml += '<td><table border="1" cellpadding="4px" style="width: 340px; border-style: dotted; border-color:gray;">';
                 }
 
-                // first 2 rows 
+                // first 2 rows
                 // image & design on the left & barcode on the right
                 xml += '<tr>';
 
@@ -827,6 +854,11 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
                     xml += '<td colspan="6" rowspan="2" style="width: 120px;font-size: 10pt;text-align: center;">';
                     xml += '<p style="text-align: center;">' + safeHTML(item.barCode) + '<barcode bar-width="1" codetype="code128" showtext="false" value="' + safeHTML(item.barCode) + '"></barcode></p>';
                     xml += '</td>';
+                } else if (item.labelType == "MET") {
+                    xml += '<td colspan="12" style="width: 210px;margin-bottom:10px">';
+                    xml += '<p><img src="https://4951235.app.netsuite.com/core/media/media.nl?id=96860&amp;c=4951235&amp;h=qGyFvV7IgP4qHpc42AJWvaZImF7JxdQEwqFKHbPN8D7d8iVM" style="width: 210px; height: 35px;" /></p>';
+                    xml += '</td>';
+
                 } else { // item.labelType == "SL"
                     xml += '<td colspan="5" style="width: 100px;">';
                     xml += '<img src="https://4951235.app.netsuite.com/core/media/media.nl?id=10998&amp;c=4951235&amp;h=qD1ob0v4w04aBj-z-4MzzsdBLhLSfUneQKTXYyKSO0G5tp2-" style="width: 100px; height: 16px;" />';
@@ -860,21 +892,43 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
                         getXMLRow('COLLECTION', item.pdfCollection, 12, 'font-size:18pt;line-height:18px;');
 
                     row = getXMLCell('CONTENT', item.pdfContent, 9, 'font-size:10pt;line-height:10px;');
-                    row += getQRCode(item.pdfDesignLabel, 40, 3, item.qrCode);
+                    row += getQRCode(item.pdfDesignLabel, 40, 3, 2, item.qrCode);
                     xml += toXMLRow(row);
                     xml += getXMLRow('ORIGIN', item.pdfExqRugsOrigin, 9, 'font-size:10pt;line-height:10px;');
+                    xml += '</table>';
+                    if (pageSize == PAGE_SIZE_LETTER)
+                        xml += '<p style="width:100%;border-top:1px dotted #999;margin:15px 0"></p>';
+
+                } else if (item.labelType == "MET") {
+
+                    row = getXMLCell('DESIGN', item.pdfDesignLabel, 6, 'font-size:14pt;');
+                    row += '<td colspan="6" rowspan="2" style="width: 120px;font-size: 10pt;text-align: center;">';
+                    row += '<p style="text-align: center;">' + safeHTML(item.barCode) + '<barcode bar-width="1" codetype="code128" showtext="false" value="' + safeHTML(item.barCode) + '"></barcode></p>';
+                    row += '</td>';
+                    xml += toXMLRow(row);
+
+                    xml += getXMLRow('SIZE', item.pdfSize, 6, 'font-size:14pt;');
+                    xml += getXMLRow('COLLECTION', item.pdfCollection, 12, 'font-size:14pt;');
+                    xml += getXMLRow('CONTENT', item.pdfContent, 12, 'font-size:14pt;');
+
+                    // 2 rows 
+                    row = getXMLCell('ORIGIN', item.pdfExqRugsOrigin, 9, 'font-size:14pt;');
+                    row += getQRCode("MET_" + item.pdfDesignLabel, 60, 3, 2, item.qrCode);
+                    xml += toXMLRow(row);
+                    xml += toXMLRow(getFooter(item.pdfMet, '&copy;The Metropolitan Museum of Art', 9));
 
                     xml += '</table>';
 
                     if (pageSize == PAGE_SIZE_LETTER)
                         xml += '<p style="width:100%;border-top:1px dotted #999;margin:15px 0"></p>';
+
                 } else if (item.labelType == "SL") {
                     xml += getXMLRow('DESIGN', item.pdfDesignLabel, 5, 'font-size:18pt');
 
                     xml += getXMLRow('COLLECTION', item.pdfCollection, 12);
 
                     row = getXMLCell('CONTENT', item.pdfContent, 9);
-                    row += getQRCode(item.pdfDesignLabel, 40, 3, item.qrCode);
+                    row += getQRCode(item.pdfDesignLabel, 40, 3, 2, item.qrCode);
                     xml += toXMLRow(row);
                     xml += getXMLRow('ORIGIN', item.pdfExqRugsOrigin, 9);
 
@@ -925,14 +979,24 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
             return value;
         }
 
-        function getQRCode(pdfDesignLabel, dim, colspan, qrCode) {
+        function getQRCode(pdfDesignLabel, dim, colspan, rowspan, qrCode) {
             if (qrCode) {
-                var fileObj = file.load({
-                    id: 'Web Site Hosting Files/Live Hosting Files/QRCODE/' + pdfDesignLabel + '.png'
-                }).getContents();
-                return '<td colspan="' + colspan + '" rowspan="2"> <p>' + '<img src=\"data:image/png;base64,' + fileObj + '\" style="width: ' + dim + 'px; height: ' + dim + 'px;" /></p></td>';
-            } else
-                return '<td colspan="' + colspan + '" rowspan="2"> </td>';
+                try {
+                    var fileObj = file.load({
+                        id: 'Web Site Hosting Files/Live Hosting Files/QRCODE/' + pdfDesignLabel + '.png'
+                    }).getContents();
+                    return '<td colspan="' + colspan + '" rowspan="' + rowspan + '">' + '<img src=\"data:image/png;base64,' + fileObj + '\" style="width: ' + dim + 'px; height: ' + dim + 'px;" /></td>';
+                } catch (e) {}
+            }
+
+            return '<td colspan="' + colspan + '" rowspan="' + rowspan + '"> </td>';
+        }
+
+        function getFooter(label, copyright, colspan) {
+            return '<td style="margin-right:30px;margin-top:5px;font-weight:normal;line-height:8px;vertical-align:bottom" colspan="' + colspan + '">' +
+                '<span style="font-size:6pt">' + label + '</span><br />' +
+                '<span style="font-size:5pt;line-height:15px; vertical-align: bottom">' + copyright + '</span>' +
+                '</td>';
         }
 
         function getXMLRow(label, value, colspan, style) {
@@ -944,7 +1008,7 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
         }
 
         function toXMLRow(value) {
-            return '<tr>' + value + "</tr>";
+            return '<tr>' + value + '</tr>';
         }
 
         function hasValue(value) {
