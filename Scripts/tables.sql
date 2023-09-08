@@ -49,19 +49,30 @@ select a.variation_id, a.product_id, d.sku, b.size, c.meta_id, c.stock_status,
         order by size;
 
 
-
-
 CREATE TABLE `er_stage_inventory` (
-  `item` varchar(45) DEFAULT NULL,
+  `item` varchar(127) DEFAULT NULL,
   `design` varchar(255) DEFAULT NULL,
-  `size` varchar(45) DEFAULT NULL,
-  `category_size` varchar(45) DEFAULT NULL,
-  `availble` varchar(255) DEFAULT NULL,
-  `bo` varchar(255) DEFAULT NULL,
-  `in_transit` varchar(255) DEFAULT NULL,
-  `eta` varchar(255) DEFAULT NULL,
-  `size_2` varchar(255) DEFAULT NULL,
-  `on_loom` tinyint(1) DEFAULT NULL
+  `category_size` varchar(63) DEFAULT NULL,
+  `availble` int DEFAULT NULL,
+  `in_transit` int DEFAULT NULL,
+  `in_transit_eta` varchar(255) DEFAULT NULL,
+  `on_loom` int DEFAULT NULL,
+  `on_loom_eta` varchar(31) DEFAULT NULL,
+  `size` varchar(63) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+
+CREATE TABLE `er_inventory` (
+  `design` varchar(255) DEFAULT NULL,
+  `size` varchar(255) DEFAULT NULL,
+  `availble` int DEFAULT NULL,
+  `in_transit` int DEFAULT NULL,
+  `in_transit_eta` varchar(255) DEFAULT NULL,
+  `on_loom` int DEFAULT NULL,
+  `on_loom_eta` varchar(31) DEFAULT NULL,
+  `sort_by_size_1` double(10,4) DEFAULT NULL,
+  `sort_by_size_2` double(10,4) DEFAULT NULL,
+  `report_date` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 
