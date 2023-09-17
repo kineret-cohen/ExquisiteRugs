@@ -12,7 +12,7 @@ class InventoryImport:
   	self.password = password
 
   def importCSV(self, filename):
-  	load_sql = "LOAD DATA LOCAL INFILE '" + filename + "' INTO TABLE netsuite_input_stock_sheet_summary_b2b FIELDS TERMINATED BY ',' LINES TERMINATED BY '\r\n' (item, design, category_size, availble, bo, in_transit, eta,on_loom);"
+  	load_sql = "LOAD DATA LOCAL INFILE '" + filename + "' INTO TABLE er_stage_inventory FIELDS TERMINATED BY ',' LINES TERMINATED BY '\r\n' (item,design,in_stock,in_transit,in_transit_eta,on_loom,on_loom_eta);"
 
   	try:
   		con = pymysql.connect(host=self.host,user=self.username,password=self.password,autocommit=True,local_infile=1)
@@ -23,7 +23,7 @@ class InventoryImport:
   		# Create cursor and execute Load SQL
   		cursor = con.cursor()
 
-  		cursor.execute('TRUNCATE netsuite_input_stock_sheet_summary_b2b;')
+  		cursor.execute('TRUNCATE er_stage_inventory;')
   		logging.info('Succuessfully truncating staging table.')
 
   		cursor.execute(load_sql)

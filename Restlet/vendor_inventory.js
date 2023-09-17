@@ -9,6 +9,7 @@ define(['N/search', 'N/record'],
         function getInventory(parameters) {
             var pages = readParam(parameters, 'pages', 1);
             var fromPage = readParam(parameters, 'fromPage', 0);
+            var pageSize = readParam(parameters, 'pageSize', 1000);
             var id = readParam(parameters, 'id', '');
             var keys = readParam(parameters, 'keys', '').split(',');
             var indecies = readParam(parameters, 'indecies', '').split(',');
@@ -21,12 +22,12 @@ define(['N/search', 'N/record'],
             });
 
             var results = [];
-            var currentIndex = fromPage * 1000;
+            var currentIndex = fromPage * pageSize;
 
             do {
                 var results = mySearch.run().getRange({
                     start: currentIndex,
-                    end: currentIndex + 1000
+                    end: currentIndex + pageSize
                 });
 
                 for (var i = 0; i < results.length; i++) {
@@ -34,21 +35,31 @@ define(['N/search', 'N/record'],
                         var record = {};
 
                         for (var j = 0; j < keys.length; j++) {
-                            // read the value from the relevant column into a specific key name
-                            record[keys[j]] = results[i].getValue(results[i].columns[Number(indecies[j])]);
+
+                            // first read the text from the relevant column
+                            var value = results[i].getText(results[i].columns[Number(indecies[j])]);
+
+                            // if none was found try the value
+                            if (!value || value.length == 0)
+                                value = results[i].getValue(results[i].columns[Number(indecies[j])]);
+
+                            // set into a specific key name
+                            record[keys[j]] = value;
                         }
 
                         recObj[recObj.length] = record;
-                    } catch (e) {}
+                    } catch (e) {
+                        //log.error('failed reading value ' + keys[j], e.message);
+                    }
                 }
 
-                currentIndex += 1000;
+                currentIndex += pageSize;
                 pages--;
-            } while (results.length == 1000 && pages > 0);
+            } while (results.length == pageSize && pages > 0);
 
             return JSON.stringify({
                 fromPage: fromPage,
-                pages: results.length / 1000,
+                pages: results.length / pageSize,
                 results: recObj
             });
         }

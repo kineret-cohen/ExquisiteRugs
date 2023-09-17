@@ -49,11 +49,11 @@ select a.variation_id, a.product_id, d.sku, b.size, c.meta_id, c.stock_status,
         order by size;
 
 
+drop table er_stage_inventory;
 CREATE TABLE `er_stage_inventory` (
   `item` varchar(127) DEFAULT NULL,
   `design` varchar(255) DEFAULT NULL,
-  `category_size` varchar(63) DEFAULT NULL,
-  `availble` int DEFAULT NULL,
+  `in_stock` int DEFAULT NULL,
   `in_transit` int DEFAULT NULL,
   `in_transit_eta` varchar(255) DEFAULT NULL,
   `on_loom` int DEFAULT NULL,
@@ -62,10 +62,11 @@ CREATE TABLE `er_stage_inventory` (
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 
+drop table er_inventory;
 CREATE TABLE `er_inventory` (
   `design` varchar(255) DEFAULT NULL,
   `size` varchar(255) DEFAULT NULL,
-  `availble` int DEFAULT NULL,
+  `in_stock` int DEFAULT NULL,
   `in_transit` int DEFAULT NULL,
   `in_transit_eta` varchar(255) DEFAULT NULL,
   `on_loom` int DEFAULT NULL,
