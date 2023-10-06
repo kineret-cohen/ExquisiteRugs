@@ -23,431 +23,41 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
                 });
 
                 if (context.request.method == 'GET') {
-                    log.debug('**** START ***** ');
 
                     form.clientScriptModulePath = 'SuiteScripts/Rugs_CS_ChangePrintLabel.js';
 
                     var scriptId = context.request.parameters.script;
                     var deploymentId = context.request.parameters.deploy;
+                    var searchAction = context.request.parameters.searchAction;
 
                     log.debug('scriptId', scriptId);
                     log.debug('deploymentId', deploymentId);
+                    log.debug('searchAction', searchAction);
 
-                    var formSerialNumbers = context.request.parameters.formSerialNumbers; //get parameter
-                    log.debug('formSerialNumbers', formSerialNumbers);
+                    buildSearchOptions(form);
 
-                    var formSerialNumberFrom = context.request.parameters.formSerialNoFrom; //get parameter
-                    log.debug('formSerialNumberFrom', formSerialNumberFrom);
+                    // chcek if this is a search request
+                    if (searchAction) {
 
-                    var formSerialNumberTo = context.request.parameters.formSerialNoTo; //get parameter
-                    log.debug('formSerialNumberTo', formSerialNumberTo);
+                        var sublist = buildResultsTable(form);
 
-                    var documentType = context.request.parameters.formDocType; //get parameter
-                    log.debug('documentType', documentType);
+                        // check what query we should build - start with items
+                        var searchQuery = buildItemsQuery(context);
 
-                    var getFromDoc = context.request.parameters.formDoc; //get parameter
-                    log.debug('getFromDoc', getFromDoc);
+                        // if not, try serial number/transaction based
+                        if (!searchQuery)
+                            searchQuery = buildSerialNumbersQuery(context);
 
-                    var formLabelType = context.request.parameters.formLabelType; //get parameter
-                    log.debug('formLabelType', formLabelType);
-
-                    var formPageSize = context.request.parameters.formPageSize; //get parameter
-                    log.debug('formPageSize', formPageSize);
-
-
-                    form.addButton({
-                        id: "custpage_search",
-                        label: "Search",
-                        functionName: 'onSearch'
-                    });
-
-                    form.addField({
-                        id: 'custpage_serialnumber',
-                        label: '1. Serial Numbers',
-                        type: serverWidget.FieldType.MULTISELECT,
-                        source: 'inventorynumber',
-                        container: 'filtersgroup'
-                    });
-
-                    var field = form.addField({
-                        id: 'custpage_serialnofrom',
-                        label: '2. Serial Numbers From',
-                        type: serverWidget.FieldType.SELECT,
-                        source: 'inventorynumber',
-                        container: 'filtersgroup'
-                    });
-
-                    field.updateBreakType({
-                        breakType: serverWidget.FieldBreakType.STARTCOL
-                    });
-
-                    field = form.addField({
-                        id: 'custpage_serialnoto',
-                        label: 'To:',
-                        type: serverWidget.FieldType.SELECT,
-                        source: 'inventorynumber',
-                        container: 'filtersgroup'
-                    });
-
-                    var fromTrans = form.addField({
-                        id: 'custpage_doctype',
-                        label: '3. Document Type',
-                        type: serverWidget.FieldType.SELECT,
-                        container: 'filtersgroup'
-                    });
-
-                    fromTrans.updateBreakType({
-                        breakType: serverWidget.FieldBreakType.STARTCOL
-                    });
-
-                    fromTrans.addSelectOption({
-                        value: "",
-                        text: ""
-                    });
-                    fromTrans.addSelectOption({
-                        value: "1",
-                        text: "Purchase Order"
-                    });
-                    fromTrans.addSelectOption({
-                        value: "2",
-                        text: "Inventory Transfer"
-                    });
-
-                    form.addField({
-                        id: 'custpage_documentno',
-                        label: 'Document Number',
-                        type: serverWidget.FieldType.SELECT,
-                        container: 'filtersgroup'
-                    });
-
-
-                    if (documentType || getFromDoc || formSerialNumbers || formSerialNumberFrom || formSerialNumberTo) {
-                        var sublist = form.addSublist({
-                            id: 'custpage_table',
-                            type: serverWidget.SublistType.LIST,
-                            label: 'Print Label'
-                        });
-
-                        sublist.addMarkAllButtons();
-
-                        // Add columns to be shown on Page
-                        sublist.addField({
-                            id: 'checkbox',
-                            label: 'CHECKBOX',
-                            type: serverWidget.FieldType.CHECKBOX
-                        });
-
-                        sublist.addField({
-                            id: 'item',
-                            label: 'Display Name',
-                            type: serverWidget.FieldType.TEXT
-                        }).updateDisplayType({
-                            displayType: serverWidget.FieldDisplayType.INLINE
-                        });
-
-                        sublist.addField({
-                            id: 'custitem_country_of_origin',
-                            label: 'Origin',
-                            type: serverWidget.FieldType.TEXT
-                        }).updateDisplayType({
-                            displayType: serverWidget.FieldDisplayType.INLINE
-                        });
-
-                        sublist.addField({
-                            id: 'custitem_program',
-                            label: 'Program',
-                            type: serverWidget.FieldType.TEXT
-                        }).updateDisplayType({
-                            displayType: serverWidget.FieldDisplayType.INLINE
-                        });
-
-                        sublist.addField({
-                            id: 'custitem_content',
-                            label: 'Content',
-                            type: serverWidget.FieldType.TEXT
-                        }).updateDisplayType({
-                            displayType: serverWidget.FieldDisplayType.INLINE
-                        });
-
-                        sublist.addField({
-                            id: 'custitem14',
-                            label: 'Size',
-                            type: serverWidget.FieldType.TEXT
-                        }).updateDisplayType({
-                            displayType: serverWidget.FieldDisplayType.INLINE
-                        });
-
-                        sublist.addField({
-                            id: 'custitem_er_label_design',
-                            label: 'Design (Label PDF)',
-                            type: serverWidget.FieldType.TEXT
-                        }).updateDisplayType({
-                            displayType: serverWidget.FieldDisplayType.INLINE
-                        });
-
-                        sublist.addField({
-                            id: 'serialnumber',
-                            label: 'Serial/Lot Number',
-                            type: serverWidget.FieldType.TEXT
-                        }).updateDisplayType({
-                            displayType: serverWidget.FieldDisplayType.INLINE
-                        });
-
-                        sublist.addField({
-                            id: 'tranid',
-                            label: 'Document',
-                            type: serverWidget.FieldType.TEXT
-                        }).updateDisplayType({
-                            displayType: serverWidget.FieldDisplayType.INLINE
-                        });
-
-                        sublist.addField({
-                            id: 'internalid',
-                            label: 'Internal Id',
-                            type: serverWidget.FieldType.TEXT
-                        }).updateDisplayType({
-                            displayType: serverWidget.FieldDisplayType.HIDDEN
-                        });
-
-                        sublist.addField({
-                            id: 'custitem_collection',
-                            label: 'Collection',
-                            type: serverWidget.FieldType.TEXT
-                        }).updateDisplayType({
-                            displayType: serverWidget.FieldDisplayType.INLINE
-                        });
-
-                        sublist.addField({
-                            id: 'custitem_quality',
-                            label: 'Quality',
-                            type: serverWidget.FieldType.TEXT
-                        }).updateDisplayType({
-                            displayType: serverWidget.FieldDisplayType.HIDDEN
-                        });
-
-                        sublist.addField({
-                            id: 'custitem_program_sizes',
-                            label: 'Program Size',
-                            type: serverWidget.FieldType.TEXT
-                        }).updateDisplayType({
-                            displayType: serverWidget.FieldDisplayType.HIDDEN
-                        });
-
-                        sublist.addField({
-                            id: 'custitem_qr_code',
-                            label: 'QR Code',
-                            type: serverWidget.FieldType.TEXT
-                        }).updateDisplayType({
-                            displayType: serverWidget.FieldDisplayType.HIDDEN
-                        });
-                        sublist.addField({
-                            id: 'custitem_new_upc_code',
-                            label: 'UPC Code',
-                            type: serverWidget.FieldType.TEXT
-                        }).updateDisplayType({
-                            displayType: serverWidget.FieldDisplayType.INLINE
-                        });
-                        sublist.addField({
-                            id: 'custitem_met',
-                            label: 'MET',
-                            type: serverWidget.FieldType.TEXT
-                        }).updateDisplayType({
-                            displayType: serverWidget.FieldDisplayType.INLINE
-                        });
-
-
-
-                        if (formSerialNumbers || formSerialNumberFrom || formSerialNumberTo || (documentType && getFromDoc)) {
-
-                            var invNumFilter = [];
-                            var invNumColumn = [];
-
-                            if (formSerialNumbers) {
-
-                                var arr = formSerialNumbers.split(",");
-                                for (var i = 0; i < arr.length; i++) {
-                                    invNumFilter.push(["inventorynumber", "is", arr[i]]);
-                                    invNumFilter.push("OR");
-                                }
-
-                                invNumFilter.pop();
-
-                            } else if (formSerialNumberFrom && formSerialNumberTo) {
-                                invNumFilter.push(["formulanumeric: to_number({inventorynumber})", "between", formSerialNumberFrom, formSerialNumberTo]);
-                            }
-
-                            // doc type filter (converted to list of serial numbers)
-                            else if (documentType && getFromDoc) {
-                                var serialNumbersByDocType = getSerialNumbersByDocType(documentType, getFromDoc);
-
-                                for (var i = 0; i < serialNumbersByDocType.length; i++) {
-                                    invNumFilter.push(["inventorynumber", "is", serialNumbersByDocType[i]]);
-                                    invNumFilter.push("OR");
-                                }
-
-                                invNumFilter.pop();
-                            }
-
-                            log.debug('invNumFilter', invNumFilter);
-
-                            invNumColumn.push(search.createColumn({
-                                name: "inventorynumber",
-                                sort: search.Sort.ASC
-                            }));
-
-                            invNumColumn.push(search.createColumn({
-                                name: "item",
-                                label: "Item"
-                            }));
-
-                            invNumColumn.push(search.createColumn({
-                                name: "parent",
-                                join: "item",
-                                label: "Design (Label PDF)"
-                            }));
-
-                            invNumColumn.push(search.createColumn({
-                                name: "custitem_country_of_origin",
-                                join: "item",
-                                label: "ER - Origin"
-                            }));
-                            invNumColumn.push(search.createColumn({
-                                name: "custitem_program",
-                                join: "item",
-                                label: "ER - Program"
-                            }));
-                            invNumColumn.push(search.createColumn({
-                                name: "custitem_content",
-                                join: "item",
-                                label: "ER - Content"
-                            }));
-                            invNumColumn.push(search.createColumn({
-                                name: "custitem_collection",
-                                join: "item",
-                                xlabel: "ER - Collection"
-                            }));
-                            invNumColumn.push(search.createColumn({
-                                name: "custitem_quality",
-                                join: "item",
-                                label: "ER - Quality"
-                            }));
-                            invNumColumn.push(search.createColumn({
-                                name: "custitem_category_size",
-                                join: "item",
-                                label: "ER - Category Size"
-                            }));
-
-                            invNumColumn.push(search.createColumn({
-                                name: "custitemnumber_aecc_width_feet"
-                            }));
-
-                            invNumColumn.push(search.createColumn({
-                                name: "custitemnumber_aecc_width_inches"
-                            }));
-
-                            invNumColumn.push(search.createColumn({
-                                name: "custitemnumber_aecc_length_feet"
-                            }));
-
-                            invNumColumn.push(search.createColumn({
-                                name: "custitemnumber_aecc_length_inches"
-                            }));
-
-                            invNumColumn.push(search.createColumn({
-                                name: "custitem_program_sizes",
-                                join: "item",
-                                label: "ER - Program Size"
-                            }));
-
-                            invNumColumn.push(search.createColumn({
-                                name: "custitem_qr_code",
-                                join: "item",
-                                label: "QR Code"
-                            }));
-
-
-                            var invNumSearch = search.create({
-                                type: "inventorynumber",
-                                filters: invNumFilter,
-                                columns: invNumColumn
-                            });
-                            invNumColumn.push(search.createColumn({
-                                name: "custitem_new_upc_code",
-                                join: "item",
-                                label: "UPC Code"
-                            }));
-                            invNumColumn.push(search.createColumn({
-                                name: "custitem_met",
-                                join: "item",
-                                label: "ER - Met Desc"
-                            }));
-
-                            log.debug("invNumSearch", invNumSearch);
-
-                            processSearchResults(invNumSearch, sublist);
+                        if (searchQuery) {
+                            processSearchResults(searchQuery, sublist);
+                            buildPrintOptions(context, form);
                         }
-
-                        // Build the filters and button in the returned form
-                        form.addSubmitButton({
-                            label: 'Export PDF'
-                        }); //.isDisabled = true;
-
-                        form.addFieldGroup({
-                            id: 'formatgroup',
-                            label: 'Print Options'
-                        });
-
-                        var labelType = form.addField({
-                            id: 'custpage_labeltype',
-                            label: 'Label Type',
-                            type: serverWidget.FieldType.SELECT,
-                            container: 'formatgroup'
-                        });
-
-                        labelType.addSelectOption({
-                            value: "ER",
-                            text: "Exquisite Rugs",
-                            isSelected: formLabelType == "ER"
-                        });
-                        labelType.addSelectOption({
-                            value: "SL",
-                            text: "Studio Library",
-                            isSelected: formLabelType == "SL"
-                        });
-                        labelType.addSelectOption({
-                            value: "UPC",
-                            text: "UPC Code",
-                            isSelected: formLabelType == "UPC"
-                        });
-                        labelType.addSelectOption({
-                            value: "MET",
-                            text: "MET",
-                            isSelected: formLabelType == "MET"
-                        });
-
-
-                        var pageSize = form.addField({
-                            id: 'custpage_pagesize',
-                            label: 'Page Size',
-                            type: serverWidget.FieldType.SELECT,
-                            container: 'formatgroup'
-                        });
-
-                        pageSize.addSelectOption({
-                            value: "1",
-                            text: "Letter",
-                            isSelected: formPageSize == "1"
-                        });
-                        pageSize.addSelectOption({
-                            value: "2",
-                            text: "UPS Sticker",
-                            isSelected: formPageSize == "2"
-                        });
                     }
 
                     context.response.writePage(form);
-                    log.debug('**** END ***** ');
-                } else {
+                }
+                // POST is always to print label
+                else {
                     returnLabel(context);
                 }
             } catch (ex) {
@@ -455,6 +65,554 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
             }
         }
 
+        function buildSearchOptions(form) {
+            form.addButton({
+                id: "custpage_search",
+                label: "Search",
+                functionName: 'onSearch'
+            });
+
+            form.addField({
+                id: 'custpage_serialnumbers',
+                label: '1. Serial Numbers',
+                type: serverWidget.FieldType.MULTISELECT,
+                source: 'inventorynumber',
+                container: 'filtersgroup'
+            });
+
+            var field = form.addField({
+                id: 'custpage_serialnofrom',
+                label: '2. Serial Numbers From',
+                type: serverWidget.FieldType.SELECT,
+                source: 'inventorynumber',
+                container: 'filtersgroup'
+            });
+
+            field.updateBreakType({
+                breakType: serverWidget.FieldBreakType.STARTCOL
+            });
+
+            field = form.addField({
+                id: 'custpage_serialnoto',
+                label: 'To:',
+                type: serverWidget.FieldType.SELECT,
+                source: 'inventorynumber',
+                container: 'filtersgroup'
+            });
+
+            var fromTrans = form.addField({
+                id: 'custpage_doctype',
+                label: '3. Document Type',
+                type: serverWidget.FieldType.SELECT,
+                container: 'filtersgroup'
+            });
+
+            fromTrans.updateBreakType({
+                breakType: serverWidget.FieldBreakType.STARTCOL
+            });
+
+            fromTrans.addSelectOption({
+                value: "",
+                text: ""
+            });
+            fromTrans.addSelectOption({
+                value: "1",
+                text: "Purchase Order"
+            });
+            fromTrans.addSelectOption({
+                value: "2",
+                text: "Inventory Transfer"
+            });
+
+            form.addField({
+                id: 'custpage_documentno',
+                label: 'Document Number',
+                type: serverWidget.FieldType.SELECT,
+                container: 'filtersgroup'
+            });
+
+
+            field = form.addField({
+                id: 'custpage_items',
+                label: '4. Item ',
+                type: serverWidget.FieldType.MULTISELECT,
+                source: 'item',
+                container: 'filtersgroup'
+            });
+
+            field.updateBreakType({
+                breakType: serverWidget.FieldBreakType.STARTCOL
+            });
+
+        }
+
+        function buildPrintOptions(context, form) {
+
+            // Build the filters and button in the returned form
+            form.addSubmitButton({
+                label: 'Export PDF'
+            });
+
+            form.addFieldGroup({
+                id: 'formatgroup',
+                label: 'Print Options'
+            });
+
+            var formLabelType = context.request.parameters.formLabelType; //get parameter
+
+            var labelType = form.addField({
+                id: 'custpage_labeltype',
+                label: 'Label Type',
+                type: serverWidget.FieldType.SELECT,
+                container: 'formatgroup'
+            });
+
+            labelType.addSelectOption({
+                value: "ER",
+                text: "Exquisite Rugs",
+                isSelected: formLabelType == "ER"
+            });
+            labelType.addSelectOption({
+                value: "SL",
+                text: "Studio Library",
+                isSelected: formLabelType == "SL"
+            });
+            labelType.addSelectOption({
+                value: "UPC",
+                text: "UPC Code",
+                isSelected: formLabelType == "UPC"
+            });
+            labelType.addSelectOption({
+                value: "MET",
+                text: "MET",
+                isSelected: formLabelType == "MET"
+            });
+
+            var pageSize = form.addField({
+                id: 'custpage_pagesize',
+                label: 'Page Size',
+                type: serverWidget.FieldType.SELECT,
+                container: 'formatgroup'
+            });
+
+            var formPageSize = context.request.parameters.formPageSize; //get parameter
+            pageSize.addSelectOption({
+                value: "1",
+                text: "Letter",
+                isSelected: formPageSize == "1"
+            });
+            pageSize.addSelectOption({
+                value: "2",
+                text: "UPS Sticker",
+                isSelected: formPageSize == "2"
+            });
+        }
+
+        // adding both the resulats table UI elements and the actual data to the form
+        function buildResultsTable(form) {
+            var sublist = form.addSublist({
+                id: 'custpage_table',
+                type: serverWidget.SublistType.LIST,
+                label: 'Print Label'
+            });
+
+            sublist.addMarkAllButtons();
+
+            // Add columns to be shown on Page
+            sublist.addField({
+                id: 'checkbox',
+                label: 'CHECKBOX',
+                type: serverWidget.FieldType.CHECKBOX
+            });
+
+            sublist.addField({
+                id: 'item',
+                label: 'Display Name',
+                type: serverWidget.FieldType.TEXT
+            }).updateDisplayType({
+                displayType: serverWidget.FieldDisplayType.INLINE
+            });
+
+            sublist.addField({
+                id: 'custitem_country_of_origin',
+                label: 'Origin',
+                type: serverWidget.FieldType.TEXT
+            }).updateDisplayType({
+                displayType: serverWidget.FieldDisplayType.INLINE
+            });
+
+            sublist.addField({
+                id: 'custitem_program',
+                label: 'Program',
+                type: serverWidget.FieldType.TEXT
+            }).updateDisplayType({
+                displayType: serverWidget.FieldDisplayType.INLINE
+            });
+
+            sublist.addField({
+                id: 'custitem_content',
+                label: 'Content',
+                type: serverWidget.FieldType.TEXT
+            }).updateDisplayType({
+                displayType: serverWidget.FieldDisplayType.INLINE
+            });
+
+            sublist.addField({
+                id: 'custitem_size',
+                label: 'Size',
+                type: serverWidget.FieldType.TEXT
+            }).updateDisplayType({
+                displayType: serverWidget.FieldDisplayType.INLINE
+            });
+
+            sublist.addField({
+                id: 'custitem_er_label_design',
+                label: 'Design (Label PDF)',
+                type: serverWidget.FieldType.TEXT
+            }).updateDisplayType({
+                displayType: serverWidget.FieldDisplayType.INLINE
+            });
+
+            sublist.addField({
+                id: 'serialnumber',
+                label: 'Serial/Lot Number',
+                type: serverWidget.FieldType.TEXT
+            }).updateDisplayType({
+                displayType: serverWidget.FieldDisplayType.INLINE
+            });
+
+            sublist.addField({
+                id: 'tranid',
+                label: 'Document',
+                type: serverWidget.FieldType.TEXT
+            }).updateDisplayType({
+                displayType: serverWidget.FieldDisplayType.INLINE
+            });
+
+            sublist.addField({
+                id: 'internalid',
+                label: 'Internal Id',
+                type: serverWidget.FieldType.TEXT
+            }).updateDisplayType({
+                displayType: serverWidget.FieldDisplayType.HIDDEN
+            });
+
+            sublist.addField({
+                id: 'custitem_collection',
+                label: 'Collection',
+                type: serverWidget.FieldType.TEXT
+            }).updateDisplayType({
+                displayType: serverWidget.FieldDisplayType.INLINE
+            });
+
+            sublist.addField({
+                id: 'custitem_quality',
+                label: 'Quality',
+                type: serverWidget.FieldType.TEXT
+            }).updateDisplayType({
+                displayType: serverWidget.FieldDisplayType.HIDDEN
+            });
+
+            sublist.addField({
+                id: 'custitem_program_sizes',
+                label: 'Program Size',
+                type: serverWidget.FieldType.TEXT
+            }).updateDisplayType({
+                displayType: serverWidget.FieldDisplayType.HIDDEN
+            });
+
+            sublist.addField({
+                id: 'custitem_qr_code',
+                label: 'QR Code',
+                type: serverWidget.FieldType.TEXT
+            }).updateDisplayType({
+                displayType: serverWidget.FieldDisplayType.HIDDEN
+            });
+            sublist.addField({
+                id: 'custitem_new_upc_code',
+                label: 'UPC Code',
+                type: serverWidget.FieldType.TEXT
+            }).updateDisplayType({
+                displayType: serverWidget.FieldDisplayType.INLINE
+            });
+            sublist.addField({
+                id: 'custitem_met',
+                label: 'MET',
+                type: serverWidget.FieldType.TEXT
+            }).updateDisplayType({
+                displayType: serverWidget.FieldDisplayType.INLINE
+            });
+
+            return sublist;
+        }
+
+        function buildSerialNumbersQuery(context) {
+            var formSerialNumbers = context.request.parameters.formSerialNumbers; //get parameter
+            log.debug('formSerialNumbers', formSerialNumbers);
+
+            var formSerialNumberFrom = context.request.parameters.formSerialNoFrom; //get parameter
+            log.debug('formSerialNumberFrom', formSerialNumberFrom);
+
+            var formSerialNumberTo = context.request.parameters.formSerialNoTo; //get parameter
+            log.debug('formSerialNumberTo', formSerialNumberTo);
+
+            var documentType = context.request.parameters.formDocType; //get parameter
+            log.debug('documentType', documentType);
+
+            var getFromDoc = context.request.parameters.formDoc; //get parameter
+            log.debug('getFromDoc', getFromDoc);
+
+            // check the search query parameters are valid
+            if (!(formSerialNumbers || formSerialNumberFrom || formSerialNumberTo || (documentType && getFromDoc)))
+                return null;
+
+
+            var invNumFilter = [];
+            var invNumColumn = [];
+
+            if (formSerialNumbers) {
+
+                var arr = formSerialNumbers.split(",");
+                for (var i = 0; i < arr.length; i++) {
+                    invNumFilter.push(["inventorynumber", "is", arr[i]]);
+                    invNumFilter.push("OR");
+                }
+
+                invNumFilter.pop();
+
+            } else if (formSerialNumberFrom && formSerialNumberTo) {
+                invNumFilter.push(["formulanumeric: to_number({inventorynumber})", "between", formSerialNumberFrom, formSerialNumberTo]);
+            }
+
+            // doc type filter (converted to list of serial numbers)
+            else if (documentType && getFromDoc) {
+                var serialNumbersByDocType = getSerialNumbersByDocType(documentType, getFromDoc);
+
+                for (var i = 0; i < serialNumbersByDocType.length; i++) {
+                    invNumFilter.push(["inventorynumber", "is", serialNumbersByDocType[i]]);
+                    invNumFilter.push("OR");
+                }
+
+                invNumFilter.pop();
+            }
+
+            log.debug('invNumFilter', invNumFilter);
+
+            invNumColumn.push(search.createColumn({
+                name: "inventorynumber",
+                sort: search.Sort.ASC
+            }));
+
+            invNumColumn.push(search.createColumn({
+                name: "item",
+                label: "Item"
+            }));
+
+            invNumColumn.push(search.createColumn({
+                name: "parent",
+                join: "item",
+                label: "Design (Label PDF)"
+            }));
+
+            invNumColumn.push(search.createColumn({
+                name: "custitem_country_of_origin",
+                join: "item",
+                label: "ER - Origin"
+            }));
+            invNumColumn.push(search.createColumn({
+                name: "custitem_program",
+                join: "item",
+                label: "ER - Program"
+            }));
+            invNumColumn.push(search.createColumn({
+                name: "custitem_content",
+                join: "item",
+                label: "ER - Content"
+            }));
+            invNumColumn.push(search.createColumn({
+                name: "custitem_collection",
+                join: "item",
+                xlabel: "ER - Collection"
+            }));
+            invNumColumn.push(search.createColumn({
+                name: "custitem_quality",
+                join: "item",
+                label: "ER - Quality"
+            }));
+            invNumColumn.push(search.createColumn({
+                name: "custitem_category_size",
+                join: "item",
+                label: "ER - Category Size"
+            }));
+
+            invNumColumn.push(search.createColumn({
+                name: "custitemnumber_aecc_width_feet"
+            }));
+
+            invNumColumn.push(search.createColumn({
+                name: "custitemnumber_aecc_width_inches"
+            }));
+
+            invNumColumn.push(search.createColumn({
+                name: "custitemnumber_aecc_length_feet"
+            }));
+
+            invNumColumn.push(search.createColumn({
+                name: "custitemnumber_aecc_length_inches"
+            }));
+
+            invNumColumn.push(search.createColumn({
+                name: "custitem_program_sizes",
+                join: "item",
+                label: "ER - Program Size"
+            }));
+
+            invNumColumn.push(search.createColumn({
+                name: "custitem_qr_code",
+                join: "item",
+                label: "QR Code"
+            }));
+
+            invNumColumn.push(search.createColumn({
+                name: "custitem_new_upc_code",
+                join: "item",
+                label: "UPC Code"
+            }));
+
+            invNumColumn.push(search.createColumn({
+                name: "custitem_met",
+                join: "item",
+                label: "ER - Met Desc"
+            }));
+
+            var searchQuery = search.create({
+                type: "inventorynumber",
+                filters: invNumFilter,
+                columns: invNumColumn
+            });
+
+            log.debug("searchQuery", searchQuery);
+            return searchQuery;
+        }
+
+        function buildItemsQuery(context) {
+            var formItems = context.request.parameters.formItems; //get parameter
+            log.debug('formItems', formItems);
+
+            var searchFilters = [];
+            var searchColums = [];
+
+            if (!formItems)
+                return null;
+
+            var arr = formItems.split(",");
+            for (var i = 0; i < arr.length; i++) {
+                searchFilters.push(["internalid", "is", arr[i]]);
+                searchFilters.push("OR");
+            }
+
+            searchFilters.pop();
+
+            searchColums.push(search.createColumn({
+                label: "Serial Number",
+                name: 'formulatext',
+                formula: "0"
+            }));
+
+            searchColums.push(search.createColumn({
+                name: "name",
+                label: "Name",
+                sort: search.Sort.ASC
+            }));
+
+            searchColums.push(search.createColumn({
+                name: "parent",
+                label: "Design (Label PDF)"
+            }));
+
+            searchColums.push(search.createColumn({
+                label: "ER - Origin",
+                name: 'custitem_country_of_origin',
+            }));
+
+            searchColums.push(search.createColumn({
+                label: "ER - Program",
+                name: 'custitem_program',
+            }));
+
+            searchColums.push(search.createColumn({
+                name: "custitem_content",
+                label: "ER - Content"
+            }));
+
+            searchColums.push(search.createColumn({
+                name: "custitem_collection",
+                xlabel: "ER - Collection"
+            }));
+
+            searchColums.push(search.createColumn({
+                name: "custitem_quality",
+                label: "ER - Quality"
+            }));
+
+            searchColums.push(search.createColumn({
+                name: "custitem_category_size",
+                label: "ER - Category Size"
+            }));
+
+            searchColums.push(search.createColumn({
+                label: "custitemnumber_aecc_width_feet",
+                name: 'formulatext',
+                formula: "0"
+            }));
+
+            searchColums.push(search.createColumn({
+                label: "custitemnumber_aecc_width_inches",
+                name: 'formulatext',
+                formula: "0"
+            }));
+
+            searchColums.push(search.createColumn({
+                label: "custitemnumber_aecc_length_feet",
+                name: 'formulatext',
+                formula: "0"
+            }));
+
+            searchColums.push(search.createColumn({
+                label: "custitemnumber_aecc_length_inches",
+                name: 'formulatext',
+                formula: "0"
+            }));
+
+            searchColums.push(search.createColumn({
+                name: "custitem_program_sizes",
+                label: "ER - Program Size"
+            }));
+
+            searchColums.push(search.createColumn({
+                name: "custitem_qr_code",
+                label: "QR Code"
+            }));
+
+            searchColums.push(search.createColumn({
+                name: "custitem_new_upc_code",
+                label: "UPC Code"
+            }));
+
+            searchColums.push(search.createColumn({
+                name: "custitem_met",
+                label: "ER - Met Desc"
+            }));
+
+            var searchQuery = search.create({
+                type: "inventoryitem",
+                filters: searchFilters,
+                columns: searchColums
+            });
+
+            log.debug("searchQuery", searchQuery);
+            return searchQuery;
+        }
 
         function getSerialNumbersByDocType(documentType, getFromDoc) {
             var serialNumbersByDocType = [];
@@ -555,6 +713,14 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
             return serialNumbersByDocType;
         }
 
+        function getValue(result, column) {
+            var value = result.getValue(column);
+            if (!value)
+                result.getText(column);
+
+            return value;
+        }
+
         function processSearchResults(invNumSearch, sublist) {
             var resultIndex = 0;
             var resultStep = 1000;
@@ -573,14 +739,13 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
 
                 for (var i = 0; i < invNumSearchResult.length; i++) {
 
-                    var serialNum = invNumSearchResult[i].getValue(invNumSearchColObj.columns[0]);
-                    var itemName = invNumSearchResult[i].getText(invNumSearchColObj.columns[1]);
+                    log.debug('Row', invNumSearchResult[i]);
 
+                    var serialNum = getValue(invNumSearchResult[i], invNumSearchColObj.columns[0]);
+                    var displayName = getValue(invNumSearchResult[i], invNumSearchColObj.columns[1]);
                     var designLabel = invNumSearchResult[i].getText(invNumSearchColObj.columns[2]);
-
                     var exqRugsOrigin = invNumSearchResult[i].getText(invNumSearchColObj.columns[3]);
                     var exqRugsPrgm = invNumSearchResult[i].getText(invNumSearchColObj.columns[4]);
-
                     if (exqRugsPrgm == 'OAK NO IMAGE' || exqRugsPrgm == 'OAK WITH IMAGE' || !designLabel)
                         designLabel = 'ASSRT';
 
@@ -589,7 +754,6 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
                     var collection = invNumSearchResult[i].getText(invNumSearchColObj.columns[6]);
                     var quality = invNumSearchResult[i].getText(invNumSearchColObj.columns[7]);
                     var categorySize = invNumSearchResult[i].getText(invNumSearchColObj.columns[8]);
-
                     var widthFeet = invNumSearchResult[i].getValue(invNumSearchColObj.columns[9]);
                     var widthInches = invNumSearchResult[i].getValue(invNumSearchColObj.columns[10]);
                     var lengthFeet = invNumSearchResult[i].getValue(invNumSearchColObj.columns[11]);
@@ -602,13 +766,21 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
                     // convert the dimensions to size label
                     var size = '';
 
-                    // in some cases we override from rug name (<name>-<size>)
-                    if (
-                        categorySize != 'SAMPLE' && categorySize != 'ORDER SIZE' && categorySize != 'SPECIAL ORDER SIZE' &&
+                    // foe samples, the size is the parent (design label)
+                    if (categorySize == 'SAMPLE') {
+                        size = designLabel;
+
+                        var displayNameArr = displayName.split(/[-:]+/);
+                        if (displayNameArr.length > 1)
+                            designLabel = displayNameArr[1];
+                    }
+                    // in some cases we set the size from rug name (<name>-<size>)
+                    else if (categorySize != 'ORDER SIZE' && categorySize != 'SPECIAL ORDER SIZE' &&
                         exqRugsPrgm != 'OAK NO IMAGE' && exqRugsPrgm != 'OAK WITH IMAGE' && exqRugsPrgm != 'CUSTOM'
                     ) {
-                        var itemSplit = itemName.split("-");
-                        size = itemSplit[1];
+                        var itemSplit = displayName.split("-");
+                        if (itemSplit.length > 1)
+                            size = itemSplit[1];
 
                     }
                     // otherwise we use the dimensions
@@ -626,7 +798,7 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
                     sublist.setSublistValue({
                         id: 'item',
                         line: index,
-                        value: itemName
+                        value: displayName
                     });
 
                     sublist.setSublistValue({
@@ -647,11 +819,12 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
 
                     if (size) {
                         sublist.setSublistValue({
-                            id: 'custitem14',
+                            id: 'custitem_size',
                             line: index,
                             value: size
                         });
                     }
+
                     sublist.setSublistValue({
                         id: 'serialnumber',
                         line: index,
@@ -713,6 +886,8 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
         }
 
         function returnLabel(context) {
+            log.debug('returnLabel', "Starting...");
+
             var request = context.request;
 
             // get PDF format options
@@ -730,7 +905,7 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
 
                 var item = {
                     pdfDesignLabel: request.getSublistValue('custpage_table', 'custitem_er_label_design', i),
-                    pdfSize: request.getSublistValue('custpage_table', 'custitem14', i),
+                    pdfSize: request.getSublistValue('custpage_table', 'custitem_size', i),
                     pdfExqRugsOrigin: request.getSublistValue('custpage_table', 'custitem_country_of_origin', i),
                     pdfCollection: request.getSublistValue('custpage_table', 'custitem_collection', i),
                     pdfQuality: request.getSublistValue('custpage_table', 'custitem_quality', i),
@@ -741,6 +916,8 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
                     qrCode: pageSize == PAGE_SIZE_LETTER ?
                         request.getSublistValue('custpage_table', 'custitem_qr_code', i) == 'true' : false
                 };
+
+                log.debug('returnLabel', "Item created...");
 
                 if (!item.programSize || item.programSize === "Other")
                     item.programSize = '';
@@ -759,6 +936,8 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
 
 
                 items.push(item);
+
+                log.debug('returnLabel', "Item added...");
             }
 
 
@@ -790,6 +969,8 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
 
 
         function addPDF(pageSize, items, startIndex, length, pdfFiles) {
+
+            log.debug('addPDF', startIndex);
 
             var xml = '<?xml version="1.0" encoding=\"UTF-8\"?>\n<!DOCTYPE pdf PUBLIC "-//big.faceless.org//report" "report-1.1.dtd">\n';
             xml += '<pdfset>';
@@ -847,6 +1028,8 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
                     xml += '<p style="text-align: center;">' + safeHTML(item.barCode) + '<barcode bar-width="2" codetype="code128" showtext="false" value="' + safeHTML(item.barCode) + '"></barcode></p>';
                     xml += '</td>';
                 } else if (item.labelType == "UPC") {
+                    log.debug('addPDF', "UPC Specific Start...");
+
                     xml += '<td colspan="6" style="width: 150px;">';
                     xml += '<p><img src="https://4951235.app.netsuite.com/core/media/media.nl?id=2106&amp;c=4951235&amp;h=ece9007b3f17bf2cc27c" style="width: 140px; height: 20px;" /></p><p style="font-size: 6pt;">WWW.EXQUISITERUGS.COM</p>';
                     xml += '</td>';
@@ -854,6 +1037,7 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
                     xml += '<td colspan="6" rowspan="2" style="width: 120px;font-size: 10pt;text-align: center;">';
                     xml += '<p style="text-align: center;">' + safeHTML(item.barCode) + '<barcode bar-width="1" codetype="code128" showtext="false" value="' + safeHTML(item.barCode) + '"></barcode></p>';
                     xml += '</td>';
+                    log.debug('addPDF', "UPC Specific End...");
                 } else if (item.labelType == "MET") {
                     xml += '<td colspan="12" style="width: 210px;margin-bottom:10px">';
                     xml += '<p><img src="https://4951235.app.netsuite.com/core/media/media.nl?id=96860&amp;c=4951235&amp;h=qGyFvV7IgP4qHpc42AJWvaZImF7JxdQEwqFKHbPN8D7d8iVM" style="width: 210px; height: 35px;" /></p>';
@@ -901,6 +1085,7 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
 
                 } else if (item.labelType == "MET") {
 
+                    log.debug('addPDF', "MET Specific Start...");
                     row = getXMLCell('DESIGN', item.pdfDesignLabel, 6, 'font-size:14pt;');
                     row += '<td colspan="6" rowspan="2" style="width: 120px;font-size: 10pt;text-align: center;">';
                     row += '<p style="text-align: center;">' + safeHTML(item.barCode) + '<barcode bar-width="1" codetype="code128" showtext="false" value="' + safeHTML(item.barCode) + '"></barcode></p>';
@@ -921,6 +1106,12 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
 
                     if (pageSize == PAGE_SIZE_LETTER)
                         xml += '<p style="width:100%;border-top:1px dotted #999;margin:15px 0"></p>';
+
+                    // force a page break every 3 lables
+                    if (linesProcessed % 3 == 2 && linesProcessed < length - 1)
+                        xml += '<pbr/>'
+
+                    log.debug('addPDF', "MET Specific End...");
 
                 } else if (item.labelType == "SL") {
                     xml += getXMLRow('DESIGN', item.pdfDesignLabel, 5, 'font-size:18pt');
@@ -957,6 +1148,8 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
 
             xml += '</body></pdf>';
             xml += '</pdfset>';
+
+            log.debug('addPDF', "creating PDF file");
 
             // rendered the XML as PDF
             var renderer = render.create();
