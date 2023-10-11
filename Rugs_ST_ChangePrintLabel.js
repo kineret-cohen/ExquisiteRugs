@@ -716,10 +716,19 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
         function getValue(result, column) {
             var value = result.getValue(column);
             if (!value)
-                result.getText(column);
+                value = result.getText(column);
 
             return value;
         }
+
+        function getText(result, column) {
+            var value = result.getText(column);
+            if (!value)
+                value = result.getValue(column);
+
+            return value;
+        }
+
 
         function processSearchResults(invNumSearch, sublist) {
             var resultIndex = 0;
@@ -742,7 +751,7 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
                     log.debug('Row', invNumSearchResult[i]);
 
                     var serialNum = getValue(invNumSearchResult[i], invNumSearchColObj.columns[0]);
-                    var displayName = getValue(invNumSearchResult[i], invNumSearchColObj.columns[1]);
+                    var displayName = getText(invNumSearchResult[i], invNumSearchColObj.columns[1]);
                     var designLabel = invNumSearchResult[i].getText(invNumSearchColObj.columns[2]);
                     var exqRugsOrigin = invNumSearchResult[i].getText(invNumSearchColObj.columns[3]);
                     var exqRugsPrgm = invNumSearchResult[i].getText(invNumSearchColObj.columns[4]);
@@ -765,6 +774,12 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
 
                     // convert the dimensions to size label
                     var size = '';
+
+                    log.debug('displayName', displayName);
+                    log.debug('categorySize', categorySize);
+                    log.debug('designLabel', designLabel);
+                    log.debug('exqRugsPrgm', exqRugsPrgm);
+                    log.debug('widthFeet', widthFeet);
 
                     // foe samples, the size is the parent (design label)
                     if (categorySize == 'SAMPLE') {
@@ -1087,12 +1102,13 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
 
                     log.debug('addPDF', "MET Specific Start...");
                     row = getXMLCell('DESIGN', item.pdfDesignLabel, 6, 'font-size:14pt;');
-                    row += '<td colspan="6" rowspan="2" style="width: 120px;font-size: 10pt;text-align: center;">';
-                    row += '<p style="text-align: center;">' + safeHTML(item.barCode) + '<barcode bar-width="1" codetype="code128" showtext="false" value="' + safeHTML(item.barCode) + '"></barcode></p>';
-                    row += '</td>';
+                    row += '<td colspan="6" style="font-size:16pt;text-align:center;">' + safeHTML(item.barCode) + '</td>';
                     xml += toXMLRow(row);
 
-                    xml += getXMLRow('SIZE', item.pdfSize, 6, 'font-size:14pt;');
+                    row = getXMLCell('SIZE', item.pdfSize, 6, 'font-size:14pt;');
+                    row += '<td colspan="6" style="text-align:center;"><barcode bar-width="1" codetype="code128" showtext="false" value="' + safeHTML(item.barCode) + '"></barcode></td>';
+                    xml += toXMLRow(row);
+
                     xml += getXMLRow('COLLECTION', item.pdfCollection, 12, 'font-size:14pt;');
                     xml += getXMLRow('CONTENT', item.pdfContent, 12, 'font-size:14pt;');
 
@@ -1149,7 +1165,7 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
             xml += '</body></pdf>';
             xml += '</pdfset>';
 
-            log.debug('addPDF', "creating PDF file");
+            //log.debug('addPDF', xml);
 
             // rendered the XML as PDF
             var renderer = render.create();
