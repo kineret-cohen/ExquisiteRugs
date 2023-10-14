@@ -8,6 +8,8 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
         var PAGE_SIZE_LETTER = 1;
         var PAGE_SIZE_UPS = 2;
 
+        var SAMLPE_CATEGORY_SIZE = '1\'X1\'6"';
+
         function onRequest(context) {
 
             try {
@@ -41,16 +43,20 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
 
                         var sublist = buildResultsTable(form);
 
+                        var isRugs = true;
+
                         // check what query we should build - start with items
                         var searchQuery = buildItemsQuery(context);
 
                         // if not, try serial number/transaction based
                         if (!searchQuery)
                             searchQuery = buildSerialNumbersQuery(context);
+                        else
+                            isRugs = false;
 
                         if (searchQuery) {
                             processSearchResults(searchQuery, sublist);
-                            buildPrintOptions(context, form);
+                            buildPrintOptions(context, form, isRugs);
                         }
                     }
 
@@ -146,7 +152,7 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
 
         }
 
-        function buildPrintOptions(context, form) {
+        function buildPrintOptions(context, form, isRugs) {
 
             // Build the filters and button in the returned form
             form.addSubmitButton({
@@ -159,7 +165,6 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
             });
 
             var formLabelType = context.request.parameters.formLabelType; //get parameter
-
             var labelType = form.addField({
                 id: 'custpage_labeltype',
                 label: 'Label Type',
@@ -167,27 +172,7 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
                 container: 'formatgroup'
             });
 
-            labelType.addSelectOption({
-                value: "ER",
-                text: "Exquisite Rugs",
-                isSelected: formLabelType == "ER"
-            });
-            labelType.addSelectOption({
-                value: "SL",
-                text: "Studio Library",
-                isSelected: formLabelType == "SL"
-            });
-            labelType.addSelectOption({
-                value: "UPC",
-                text: "UPC Code",
-                isSelected: formLabelType == "UPC"
-            });
-            labelType.addSelectOption({
-                value: "MET",
-                text: "MET",
-                isSelected: formLabelType == "MET"
-            });
-
+            var formPageSize = context.request.parameters.formPageSize; //get parameter
             var pageSize = form.addField({
                 id: 'custpage_pagesize',
                 label: 'Page Size',
@@ -195,17 +180,53 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
                 container: 'formatgroup'
             });
 
-            var formPageSize = context.request.parameters.formPageSize; //get parameter
-            pageSize.addSelectOption({
-                value: "1",
-                text: "Letter",
-                isSelected: formPageSize == "1"
-            });
-            pageSize.addSelectOption({
-                value: "2",
-                text: "UPS Sticker",
-                isSelected: formPageSize == "2"
-            });
+
+            if (isRugs) {
+                labelType.addSelectOption({
+                    value: "ER",
+                    text: "Exquisite Rugs",
+                    isSelected: formLabelType == "ER"
+                });
+                labelType.addSelectOption({
+                    value: "SL",
+                    text: "Studio Library",
+                    isSelected: formLabelType == "SL"
+                });
+                labelType.addSelectOption({
+                    value: "UPC",
+                    text: "UPC Code",
+                    isSelected: formLabelType == "UPC"
+                });
+                labelType.addSelectOption({
+                    value: "MET",
+                    text: "MET",
+                    isSelected: formLabelType == "MET"
+                });
+
+                pageSize.addSelectOption({
+                    value: "1",
+                    text: "Letter",
+                    isSelected: formPageSize == "1"
+                });
+                pageSize.addSelectOption({
+                    value: "2",
+                    text: "UPS Sticker",
+                    isSelected: formPageSize == "2"
+                });
+            } else {
+                labelType.addSelectOption({
+                    value: "SL",
+                    text: "Studio Library",
+                    isSelected: formLabelType == "SL"
+                });
+
+                pageSize.addSelectOption({
+                    value: "1",
+                    text: "Letter",
+                    isSelected: formPageSize == "1"
+                });
+            }
+
         }
 
         // adding both the resulats table UI elements and the actual data to the form
@@ -768,7 +789,6 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
                     if (exqRugsPrgm == 'OAK NO IMAGE' || exqRugsPrgm == 'OAK WITH IMAGE' || !designLabel)
                         designLabel = 'ASSRT';
 
-
                     var exqRugsContent = invNumSearchResult[i].getText(invNumSearchColObj.columns[5]);
                     var collection = invNumSearchResult[i].getText(invNumSearchColObj.columns[6]);
                     var quality = invNumSearchResult[i].getText(invNumSearchColObj.columns[7]);
@@ -785,9 +805,10 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
                     // convert the dimensions to size label
                     var size = '';
 
-                    // foe samples, the size is the parent (design label)
-                    if (categorySize == 'SAMPLE') {
-                        size = designLabel;
+                    // for samples (specific size catepry: 1'X1'6"), 
+                    // the size and design extacted from the parent (design label)
+                    if (categorySize == SAMLPE_CATEGORY_SIZE) {
+                        size = SAMLPE_CATEGORY_SIZE;
 
                         var displayNameArr = displayName.split(/[-:]+/);
                         if (displayNameArr.length > 1)
@@ -998,7 +1019,9 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
                     xml += '</td>';
 
                     xml += '<td colspan="7" rowspan="2" style="width: 140px;">';
-                    xml += '<p style="font-size: 14pt;text-align: center;">' + safeHTML(item.barCode) + '<barcode height="22" width="160" codetype="code128" showtext="false" value="' + safeHTML(item.barCode) + '"></barcode></p>';
+                    xml += '<p style="font-size: 14pt;text-align: center;">' +
+                        (item.pdfSize == SAMLPE_CATEGORY_SIZE ? '<br/>' : safeHTML(item.barCode)) +
+                        '<barcode height="22" width="160" codetype="code128" showtext="false" value="' + safeHTML(item.barCode) + '"></barcode></p>';
                     xml += '</td>';
                 }
 
