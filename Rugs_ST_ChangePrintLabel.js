@@ -729,6 +729,16 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
             return value;
         }
 
+        function addResultCell(sublist, id, index, value) {
+            if (value) {
+                sublist.setSublistValue({
+                    id: id,
+                    line: index,
+                    value: value
+                });
+            }
+        }
+
 
         function processSearchResults(invNumSearch, sublist) {
             var resultIndex = 0;
@@ -775,12 +785,6 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
                     // convert the dimensions to size label
                     var size = '';
 
-                    log.debug('displayName', displayName);
-                    log.debug('categorySize', categorySize);
-                    log.debug('designLabel', designLabel);
-                    log.debug('exqRugsPrgm', exqRugsPrgm);
-                    log.debug('widthFeet', widthFeet);
-
                     // foe samples, the size is the parent (design label)
                     if (categorySize == 'SAMPLE') {
                         size = designLabel;
@@ -809,90 +813,20 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
                         }
                     }
 
+                    addResultCell(sublist, 'item', index, displayName);
+                    addResultCell(sublist, 'custitem_country_of_origin', index, exqRugsOrigin);
+                    addResultCell(sublist, 'custitem_program', index, exqRugsPrgm);
+                    addResultCell(sublist, 'custitem_content', index, exqRugsContent);
+                    addResultCell(sublist, 'custitem_size', index, size);
+                    addResultCell(sublist, 'serialnumber', index, serialNum);
+                    addResultCell(sublist, 'custitem_er_label_design', index, designLabel);
+                    addResultCell(sublist, 'custitem_collection', index, collection);
+                    addResultCell(sublist, 'custitem_quality', index, quality);
+                    addResultCell(sublist, 'programSize', index, programSize);
+                    addResultCell(sublist, 'custitem_qr_code', index, qrCode ? qrCode.toString() : qrCode);
+                    addResultCell(sublist, 'upcCode', index, upcCode ? upcCode.toString() : upcCode);
+                    addResultCell(sublist, 'custitem_met', index, metDesc);
 
-                    sublist.setSublistValue({
-                        id: 'item',
-                        line: index,
-                        value: displayName
-                    });
-
-                    sublist.setSublistValue({
-                        id: 'custitem_country_of_origin',
-                        line: index,
-                        value: exqRugsOrigin
-                    });
-                    sublist.setSublistValue({
-                        id: 'custitem_program',
-                        line: index,
-                        value: exqRugsPrgm
-                    });
-                    sublist.setSublistValue({
-                        id: 'custitem_content',
-                        line: index,
-                        value: exqRugsContent
-                    });
-
-                    if (size) {
-                        sublist.setSublistValue({
-                            id: 'custitem_size',
-                            line: index,
-                            value: size
-                        });
-                    }
-
-                    sublist.setSublistValue({
-                        id: 'serialnumber',
-                        line: index,
-                        value: serialNum
-                    });
-
-                    sublist.setSublistValue({
-                        id: 'custitem_er_label_design',
-                        line: index,
-                        value: designLabel
-                    });
-
-                    sublist.setSublistValue({
-                        id: 'custitem_collection',
-                        line: index,
-                        value: collection
-                    });
-
-                    sublist.setSublistValue({
-                        id: 'custitem_quality',
-                        line: index,
-                        value: quality
-                    });
-
-                    if (programSize) {
-                        sublist.setSublistValue({
-                            id: 'custitem_program_sizes',
-                            line: index,
-                            value: programSize
-                        });
-                    }
-
-                    sublist.setSublistValue({
-                        id: 'custitem_qr_code',
-                        line: index,
-                        value: qrCode.toString()
-                    });
-
-                    if (upcCode) {
-                        sublist.setSublistValue({
-                            id: 'custitem_new_upc_code',
-                            line: index,
-                            value: upcCode.toString()
-                        });
-                    }
-
-                    if (metDesc) {
-                        sublist.setSublistValue({
-                            id: 'custitem_met',
-                            line: index,
-                            value: metDesc
-                        });
-                    }
 
                     index++;
                 }
@@ -1023,7 +957,7 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
                     if (linesProcessed % 2 == 0)
                         xml += '<tr style="padding-top:10px">';
 
-                    xml += '<td><table border="1" cellpadding="4px" style="width: 340px; border-style: dotted; border-color:gray;">';
+                    xml += '<td><table border="1" cellpadding="4px" style="width: 345px; border-style: dotted; border-color:gray;">';
                 }
 
                 // first 2 rows
