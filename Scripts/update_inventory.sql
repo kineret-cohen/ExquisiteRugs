@@ -1,10 +1,8 @@
-
-
-drop procedure er_update_inventory2;
-
+drop procedure er_update_inventory;
 
 DELIMITER $$
-CREATE PROCEDURE `er_update_inventory2`()
+
+CREATE PROCEDURE `er_update_inventory`()
 BEGIN
 
 	-- verify we have something to update
@@ -130,6 +128,53 @@ BEGIN
 		insert into er_etl_history( timestamp, table_name, rows_updated)
         values(now(), 'er_stage_variation_inventory', ROW_COUNT());
 	
+		
+		
+        -- generate data for variation inventory size update
+		truncate er_stage_variation_inventory_size;
+		insert into er_stage_variation_inventory_size(  variation_id, product_id, sku, size, meta_id, current_stock, new_stock)
+		select a.variation_id, a.product_id, d.sku, b.size, c.meta_id, 
+        IFNULL(c.stock,0) as stock, 
+		IFNULL(e.in_stock,0) as new_stock
+		from
+		(select id as variation_id, post_parent as product_id
+		from hbi_posts
+		where post_type='product_variation') a
+		inner join (
+		select post_id, meta_id, meta_value as size
+		from hbi_postmeta 
+		where meta_key = 'attribute_pa_size'
+		) b 
+		on a.variation_id = b.post_id
+		inner join (
+		select post_id, meta_id, meta_value as stock
+		from hbi_postmeta 
+		where meta_key = '_stock'
+		) c 
+		on a.variation_id = c.post_id
+		inner join 
+		(select post_id, meta_value as sku 
+		from hbi_postmeta
+		where meta_key in ('_sku') and meta_value <> '') d 
+		on a.product_id = d.post_id
+
+		left join (
+		select design, replace(replace(size, '"', ''), "'", '') as size, in_stock from er_inventory
+		) e
+		on d.sku = e.design and b.size = e.size;
+        
+        -- update wordpress
+		update hbi_postmeta pm inner join  er_stage_variation_inventory_size pii 
+		on pii.meta_id = pm.meta_id 
+		set pm.meta_value = pii.new_stock
+		where  pii.new_stock <> pm.meta_value;
+		
+
+        -- log
+		insert into er_etl_history( timestamp, table_name, rows_updated)
+        values(now(), 'er_stage_variation_inventory_size', ROW_COUNT());
+        
+        
 		-- update studio_library tables
 		truncate studio_library.er_inventory;
     
