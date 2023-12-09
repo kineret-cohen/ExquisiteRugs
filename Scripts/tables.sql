@@ -102,8 +102,8 @@ CREATE TABLE `er_stage_variation_inventory_size` (
   `sku` varchar(255) DEFAULT NULL,
   `size` varchar(255) DEFAULT NULL,
   `meta_id` int NOT NULL,
-  `current_stock` INT DEFAULT 0,
-  `new_stock` INT DEFAULT 0
+  `current_stock` varchar(255) DEFAULT '0',
+  `new_stock` varchar(255) DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 
