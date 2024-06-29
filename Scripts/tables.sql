@@ -96,6 +96,17 @@ CREATE TABLE `er_stage_variation_inventory` (
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 
+CREATE TABLE `er_stage_variation_inventory_size` (
+  `variation_id` int NOT NULL,
+  `product_id` int NOT NULL,
+  `sku` varchar(255) DEFAULT NULL,
+  `size` varchar(255) DEFAULT NULL,
+  `meta_id` int NOT NULL,
+  `current_stock` varchar(255) DEFAULT '0',
+  `new_stock` varchar(255) DEFAULT '0'
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+
 CREATE TABLE `er_etl_history` (
   `timestamp` datetime NOT NULL,
   `table_name` varchar(255) DEFAULT NULL,

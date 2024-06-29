@@ -46,15 +46,17 @@ if __name__ == "__main__":
 	 
 	# Read arguments from command line
 	args = parser.parse_args()
+    
+	try:
+		inv = InventoryExport(args.consumer_key,args.consumer_secret,args.token,args.token_secret)
+		response = inv.get(args.url, args.realm)
+		logging.info('inventory_export response received')
+        
+		data = json.loads(response.text)
 
-	inv = InventoryExport(args.consumer_key,args.consumer_secret,args.token,args.token_secret)
-	response = inv.get(args.url, args.realm)
-	logging.info('inventory_export response received')
-	
-	data = json.loads(response.text)
-	inv.toCSV(data['results'], args.with_header)
-	logging.info('inventory_export completed')
+		inv.toCSV(data['results'], args.with_header)
+		logging.info('inventory_export completed')
+	except Exception as err:
+		logging.error('inventory_export failed. Reason {0}'.format(err))
 	
 	exit(1)
-
-
