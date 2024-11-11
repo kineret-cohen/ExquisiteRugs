@@ -202,6 +202,11 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
                     text: "MET",
                     isSelected: formLabelType == "MET"
                 });
+                labelType.addSelectOption({
+                    value: "PL",
+                    text: "Private Label",
+                    isSelected: formLabelType == "PL"
+                });
 
                 pageSize.addSelectOption({
                     value: "1",
@@ -810,9 +815,9 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
                     if (categorySize == SAMLPE_CATEGORY_SIZE) {
                         size = SAMLPE_CATEGORY_SIZE;
 
-                        var displayNameArr = displayName.split(/[-:]+/);
+                        var displayNameArr = displayName.split(/[:]+/);
                         if (displayNameArr.length > 1)
-                            designLabel = displayNameArr[1];
+                            designLabel = displayNameArr[1].trim();
                     }
                     // in some cases we set the size from rug name (<name>-<size>)
                     else if (categorySize != 'ORDER SIZE' && categorySize != 'SPECIAL ORDER SIZE' &&
@@ -843,9 +848,9 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
                     addResultCell(sublist, 'custitem_er_label_design', index, designLabel);
                     addResultCell(sublist, 'custitem_collection', index, collection);
                     addResultCell(sublist, 'custitem_quality', index, quality);
-                    addResultCell(sublist, 'programSize', index, programSize);
+                    addResultCell(sublist, 'custitem_program_sizes', index, programSize);
                     addResultCell(sublist, 'custitem_qr_code', index, qrCode ? qrCode.toString() : qrCode);
-                    addResultCell(sublist, 'upcCode', index, upcCode ? upcCode.toString() : upcCode);
+                    addResultCell(sublist, 'custitem_new_upc_code', index, upcCode ? upcCode.toString() : upcCode);
                     addResultCell(sublist, 'custitem_met', index, metDesc);
 
 
@@ -896,7 +901,7 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
                     item.pdfMet = "";
 
                 // choose what data we will use for barcode
-                if (item.labelType == "ER" || item.labelType == "MET")
+                if (item.labelType == "ER" || item.labelType == "MET" || item.labelType == "PL")
                     item.barCode = request.getSublistValue('custpage_table', 'serialnumber', i);
                 else if (item.labelType == "SL")
                     item.barCode = request.getSublistValue('custpage_table', 'item', i);
@@ -965,7 +970,7 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
                 var item = items[i];
                 labelType = item.labelType;
 
-                if (item.labelType == "ER" || item.labelType == "UPC")
+                if (item.labelType == "ER" || item.labelType == "UPC" || item.labelType == "PL")
                     xml += '<table border="1" cellpadding="8px" style="width: 400px;padding:15px; border-style: dotted;">';
                 else if (item.labelType == "MET")
                     xml += '<table border="1" cellpadding="2px" style="width: 400px;padding:15px; border-style: dotted;">';
@@ -990,12 +995,21 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
                     xml += '<p><img src="https://4951235.app.netsuite.com/core/media/media.nl?id=2106&amp;c=4951235&amp;h=ece9007b3f17bf2cc27c" style="width: 140px; height: 20px;" /></p><p style="font-size: 6pt;">WWW.EXQUISITERUGS.COM</p>';
                     xml += '</td>';
 
-                    if (item.labelType == "ER" && pageSize == PAGE_SIZE_LETTER)
+                    if (pageSize == PAGE_SIZE_LETTER)
                         xml += '<td colspan="6" rowspan="2" style="width: 225px; font-size: 42pt;text-align: center;">';
                     else
                         xml += '<td colspan="6" rowspan="2" style="width: 180px;font-size: 26pt;text-align: center;">';
 
                     xml += '<p style="text-align: center;">' + safeHTML(item.barCode) + '<barcode bar-width="2" codetype="code128" showtext="false" value="' + safeHTML(item.barCode) + '"></barcode></p>';
+                    xml += '</td>';
+                } else if (item.labelType == "PL") {
+
+                    if (pageSize == PAGE_SIZE_LETTER)
+                        xml += '<td colspan="12" style="padding: 0;font-size: 42pt;text-align: center;">';
+                    else
+                        xml += '<td colspan="12" style="padding: 0;font-size: 26pt;text-align: center;">';
+
+                    xml += '<p style="text-align: center;margin:0 auto;">' + safeHTML(item.barCode) + '<barcode bar-width="2" style="width: 100%;" codetype="code128" showtext="false" value="' + safeHTML(item.barCode) + '"></barcode></p>';
                     xml += '</td>';
                 } else if (item.labelType == "UPC") {
                     log.debug('addPDF', "UPC Specific Start...");
@@ -1014,13 +1028,13 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
                     xml += '</td>';
 
                 } else { // item.labelType == "SL"
-                    xml += '<td colspan="5" style="width: 100px;">';
+                    xml += '<td colspan="4">';
                     xml += '<img src="https://4951235.app.netsuite.com/core/media/media.nl?id=10998&amp;c=4951235&amp;h=qD1ob0v4w04aBj-z-4MzzsdBLhLSfUneQKTXYyKSO0G5tp2-" style="width: 100px; height: 16px;" />';
                     xml += '</td>';
 
-                    xml += '<td colspan="7" rowspan="2" style="width: 140px;">';
+                    xml += '<td colspan="8" style="width: 140px;">';
                     xml += '<p style="font-size: 14pt;text-align: center;">' +
-                        (item.pdfSize == SAMLPE_CATEGORY_SIZE ? '<br/>' : safeHTML(item.barCode)) +
+                        (item.pdfSize == SAMLPE_CATEGORY_SIZE ? '' : safeHTML(item.barCode)) +
                         '<barcode height="22" width="160" codetype="code128" showtext="false" value="' + safeHTML(item.barCode) + '"></barcode></p>';
                     xml += '</td>';
                 }
@@ -1036,16 +1050,29 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
                     else
                         xml += '<p>DESIGN: <span style="font-size: 24pt;line-height:24px;"><strong>' + item.pdfDesignLabel + '</strong></span></p>';
 
-
                     xml += '</td>';
                     xml += '</tr>';
-
 
                     xml += getXMLRow('SIZE', item.pdfSize, 12, 'font-size:16pt;');
 
                     xml += (item.pdfCollection.length < 12 && pageSize == PAGE_SIZE_LETTER) ?
                         getXMLRow('COLLECTION', item.pdfCollection, 12, 'font-size:30pt;line-height:18px;') :
                         getXMLRow('COLLECTION', item.pdfCollection, 12, 'font-size:18pt;line-height:18px;');
+
+                    row = getXMLCell('CONTENT', item.pdfContent, 9, 'font-size:10pt;line-height:10px;');
+                    row += getQRCode(item.pdfDesignLabel, 40, 3, 2, item.qrCode);
+                    xml += toXMLRow(row);
+                    xml += getXMLRow('ORIGIN', item.pdfExqRugsOrigin, 9, 'font-size:10pt;line-height:10px;');
+                    xml += '</table>';
+                    if (pageSize == PAGE_SIZE_LETTER)
+                        xml += '<p style="width:100%;border-top:1px dotted #999;margin:15px 0"></p>';
+
+                } else if (item.labelType == "PL") {
+
+                    var code = 'X00' + item.pdfDesignLabel.substring(0, 4) + 'A' + item.pdfCollection.substring(0, 3).toUpperCase();
+                    xml += toXMLRow('<td colspan="12" align="center" style="padding: 0;font-size:11pt;font-weight:normal">' + code + '</td>')
+
+                    xml += getXMLRow('SIZE', item.pdfSize, 12, 'font-size:16pt;');
 
                     row = getXMLCell('CONTENT', item.pdfContent, 9, 'font-size:10pt;line-height:10px;');
                     row += getQRCode(item.pdfDesignLabel, 40, 3, 2, item.qrCode);
@@ -1087,7 +1114,7 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
                     log.debug('addPDF', "MET Specific End...");
 
                 } else if (item.labelType == "SL") {
-                    xml += getXMLRow('DESIGN', item.pdfDesignLabel, 5, 'font-size:18pt');
+                    xml += getXMLRow('DESIGN', item.pdfDesignLabel, 12, 'font-size:18pt');
 
                     xml += getXMLRow('COLLECTION', item.pdfCollection, 12);
 
