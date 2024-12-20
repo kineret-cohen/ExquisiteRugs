@@ -180,8 +180,24 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
                 container: 'formatgroup'
             });
 
+            var formLogo = context.request.parameters.formLogo; //get parameter
+            var logo = form.addField({
+                id: 'custpage_logo',
+                label: 'Logo',
+                type: serverWidget.FieldType.SELECT,
+                container: 'formatgroup'
+            });
+
+            // Inject the custom CSS to hide the select field by default
+            /* Hide the logo field on page load */
+            form.addField({
+                id: 'custpage_inline_css',
+                type: serverWidget.FieldType.INLINEHTML,
+                label: 'Inline CSS'
+            }).defaultValue = '<style id="custpage_inline_css_id" type="text/css"> div[data-field-name=custpage_logo] { display: none; }</style>';
 
             if (isRugs) {
+                // label type options
                 labelType.addSelectOption({
                     value: "ER",
                     text: "Exquisite Rugs",
@@ -207,7 +223,13 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
                     text: "Private Label",
                     isSelected: formLabelType == "PL"
                 });
+                labelType.addSelectOption({
+                    value: "PL2",
+                    text: "Private Label (Logo)",
+                    isSelected: formLabelType == "PL2"
+                });
 
+                // page size options
                 pageSize.addSelectOption({
                     value: "1",
                     text: "Letter",
@@ -218,6 +240,14 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
                     text: "UPS Sticker",
                     isSelected: formPageSize == "2"
                 });
+
+
+                // logo options
+                var logoOptions = ["Stellas Finishing Touches", "Shehadi", "SH Designs", "Robb and Stucky", "Olivia’s Home Furnishings", "Nouvelle", "Norris Furniture", "Nature Works", "M Grossman", "judith norman", "John Strauss", "J Sandler", "Haven Home", "Exclusive Flooring", "Door County", "Cabot House Furniture", "Bay Design Black White", "Artistic Elements", "Annette Tatum", "Aesthetics"];
+                logoOptions.forEach(function(item) {
+                    addLogoOption(logo, item, formLogo);
+                });
+
             } else {
                 labelType.addSelectOption({
                     value: "SL",
@@ -868,6 +898,7 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
             // get PDF format options
             var labelType = request.parameters["custpage_labeltype"];
             var pageSize = getSelectedOption(request, "custpage_pagesize", 1);
+            var logo = request.parameters["custpage_logo"];
 
             // first extract only lines that user selected
             var lineCount = request.getLineCount('custpage_table');
@@ -879,6 +910,11 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
                     continue;
 
                 var item = {
+                    // apply to all items
+                    labelType: labelType,
+                    logo: logo,
+
+                    // item specific
                     pdfDesignLabel: request.getSublistValue('custpage_table', 'custitem_er_label_design', i),
                     pdfSize: request.getSublistValue('custpage_table', 'custitem_size', i),
                     pdfExqRugsOrigin: request.getSublistValue('custpage_table', 'custitem_country_of_origin', i),
@@ -886,13 +922,13 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
                     pdfQuality: request.getSublistValue('custpage_table', 'custitem_quality', i),
                     pdfContent: request.getSublistValue('custpage_table', 'custitem_content', i),
                     pdfMet: request.getSublistValue('custpage_table', 'custitem_met', i),
-                    labelType: labelType,
                     programSize: request.getSublistValue('custpage_table', 'custitem_program_sizes', i),
                     qrCode: pageSize == PAGE_SIZE_LETTER ?
                         request.getSublistValue('custpage_table', 'custitem_qr_code', i) == 'true' : false
                 };
 
                 log.debug('returnLabel', "Item created...");
+                log.debug('item', item);
 
                 if (!item.programSize || item.programSize === "Other")
                     item.programSize = '';
@@ -901,7 +937,7 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
                     item.pdfMet = "";
 
                 // choose what data we will use for barcode
-                if (item.labelType == "ER" || item.labelType == "MET" || item.labelType == "PL")
+                if (item.labelType == "ER" || item.labelType == "MET" || item.labelType == "PL" || item.labelType == "PL2")
                     item.barCode = request.getSublistValue('custpage_table', 'serialnumber', i);
                 else if (item.labelType == "SL")
                     item.barCode = request.getSublistValue('custpage_table', 'item', i);
@@ -911,7 +947,6 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
 
 
                 items.push(item);
-
                 log.debug('returnLabel', "Item added...");
             }
 
@@ -974,7 +1009,7 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
                     xml += '<table border="1" cellpadding="8px" style="width: 400px;padding:15px; border-style: dotted;">';
                 else if (item.labelType == "MET")
                     xml += '<table border="1" cellpadding="2px" style="width: 400px;padding:15px; border-style: dotted;">';
-                else {
+                else { // SL pr PL2
                     // extrenal table to create 2 columns
                     if (linesProcessed == 0)
                         xml += '<table>';
@@ -983,7 +1018,10 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
                     if (linesProcessed % 2 == 0)
                         xml += '<tr style="padding-top:10px">';
 
-                    xml += '<td><table border="1" cellpadding="4px" style="width: 345px; border-style: dotted; border-color:gray;">';
+                    if (item.labelType == "PL2")
+                        xml += '<td><table border="1" cellpadding="4px" style="width: 300px; border-style: dotted; border-color:gray;">';
+                    else
+                        xml += '<td><table border="1" cellpadding="4px" style="width: 345px; border-style: dotted; border-color:gray;">';
                 }
 
                 // first 2 rows
@@ -1010,6 +1048,11 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
                         xml += '<td colspan="12" style="padding: 0;font-size: 26pt;text-align: center;">';
 
                     xml += '<p style="text-align: center;margin:0 auto;">' + safeHTML(item.barCode) + '<barcode bar-width="2" style="width: 100%;" codetype="code128" showtext="false" value="' + safeHTML(item.barCode) + '"></barcode></p>';
+                    xml += '</td>';
+                } else if (item.labelType == "PL2") {
+                    xml += getLogo(item.logo, 140, 70, 6, 2);
+                    xml += '<td colspan="6" style="font-size: 32pt;text-align: right;">';
+                    xml += '<p style="text-align: right;margin:0 auto;"><barcode bar-width="1" style="width: 140px;" codetype="code128" showtext="false" value="' + safeHTML(item.barCode) + '"></barcode></p>';
                     xml += '</td>';
                 } else if (item.labelType == "UPC") {
                     log.debug('addPDF', "UPC Specific Start...");
@@ -1070,17 +1113,40 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
                 } else if (item.labelType == "PL") {
 
                     var code = 'X00' + item.pdfDesignLabel.substring(0, 4) + 'A' + item.pdfCollection.substring(0, 3).toUpperCase();
-                    xml += toXMLRow('<td colspan="12" align="center" style="padding: 0;font-size:11pt;font-weight:normal">' + code + '</td>')
+                    xml += toXMLRow('<td colspan="12" align="right" style="padding: 0;font-size:10pt;font-weight:normal">' + code + '</td>');
 
-                    xml += getXMLRow('SIZE', item.pdfSize, 12, 'font-size:16pt;');
+                    xml += getXMLRow('SIZE', item.pdfSize, 12, 'font-size:14pt');
+                    xml += getXMLRow('CONTENT', item.pdfContent, 12, 'font-size:14pt');
+                    xml += getXMLRow('ORIGIN', item.pdfExqRugsOrigin, 12, 'font-size:14pt');
 
-                    row = getXMLCell('CONTENT', item.pdfContent, 9, 'font-size:10pt;line-height:10px;');
-                    row += getQRCode(item.pdfDesignLabel, 40, 3, 2, item.qrCode);
-                    xml += toXMLRow(row);
-                    xml += getXMLRow('ORIGIN', item.pdfExqRugsOrigin, 9, 'font-size:10pt;line-height:10px;');
                     xml += '</table>';
                     if (pageSize == PAGE_SIZE_LETTER)
                         xml += '<p style="width:100%;border-top:1px dotted #999;margin:15px 0"></p>';
+
+                } else if (item.labelType == "PL2") {
+
+                    log.debug("private label", "starting");
+                    var code = 'X00' + item.pdfDesignLabel.substring(0, 4) + 'A' + item.pdfCollection.substring(0, 3).toUpperCase();
+                    xml += toXMLRow('<td colspan="6" align="center" style="padding: 0;font-size:11pt;font-weight:normal">' + code + '</td>');
+
+                    xml += getXMLRow('CONTENT', item.pdfContent, 12, 'font-size:10pt;line-height:10px;');
+                    xml += getXMLRow('ORIGIN', item.pdfExqRugsOrigin, 12, 'font-size:10pt;line-height:10px;');
+                    xml += getXMLRow('SIZES', item.programSize, 12, 'font-size:10pt;line-height:10px;');
+                    //xml += '</table>';
+                    //if (pageSize == PAGE_SIZE_LETTER)
+                    //    xml += '<p style="width:100%;border-top:1px dotted #999;margin:15px 0"></p>';
+
+                    xml += '</table></td>';
+
+
+                    // extrnal table tags
+                    // wrap every 2 in a row
+                    if (linesProcessed % 2 == 1 || linesProcessed == length - 1)
+                        xml += '</tr>';
+
+                    // last element - close the table
+                    if (linesProcessed == length - 1)
+                        xml += '</table>';
 
                 } else if (item.labelType == "MET") {
 
@@ -1109,7 +1175,7 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
 
                     // force a page break every 3 lables
                     if (linesProcessed % 3 == 2 && linesProcessed < length - 1)
-                        xml += '<pbr/>'
+                        xml += '<pbr/>';
 
                     log.debug('addPDF', "MET Specific End...");
 
@@ -1125,9 +1191,7 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
 
                     xml += getXMLRow('SIZES', item.programSize, 12, 'font-size:10pt');
 
-
                     xml += '</table></td>';
-
 
                     // extrnal table tags
                     // wrap every 2 in a row
@@ -1172,6 +1236,7 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
             return value;
         }
 
+
         function getQRCode(pdfDesignLabel, dim, colspan, rowspan, qrCode) {
             if (qrCode) {
                 try {
@@ -1183,6 +1248,34 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
             }
 
             return '<td colspan="' + colspan + '" rowspan="' + rowspan + '"> </td>';
+        }
+
+        function addLogoOption(element, text, currentValue) {
+            element.addSelectOption({
+                value: toSnakeCase(text),
+                text: text,
+                isSelected: currentValue == toSnakeCase(text)
+            });
+        }
+
+        function getLogo(name, width, height, colspan, rowspan) {
+
+            var element = '<td colspan="' + colspan + '" rowspan="' + rowspan + '"><div style="width: ' + width + 'px; height: ' + height + 'px;overflow: hidden;">';
+            if (name != 'none') {
+                try {
+                    var fileObj = file.load({
+                        id: 'Web Site Hosting Files/Live Hosting Files/Logo/' + name + '.jpg'
+                    }).getContents();
+                    element += '<img src="data:image/jpeg;base64,' + fileObj + '" style="width: ' + width + 'px;height: ' + height + ';" />';
+                } catch (e) {
+                    log.error('getLogo failed', e.message);
+                }
+            }
+
+            element += '</div></td>';
+            log.debug("element", element);
+
+            return element;
         }
 
         function getFooter(label, copyright, colspan) {
@@ -1222,7 +1315,14 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
             return text.toString().replace(/[<>"'\r\n&]/g, function(chr) {
                 return '&' + table[chr] + ';';
             });
-        };
+        }
+
+        function toSnakeCase(str) {
+            return str
+                .replace(/([a-z])([A-Z])/g, '$1_$2') // Add an underscore between lowercase and uppercase letters
+                .replace(/[\s\-]+/g, '_') // Replace spaces and hyphens with underscores
+                .toLowerCase();
+        }
 
         function GetDateFormat() {
             try {

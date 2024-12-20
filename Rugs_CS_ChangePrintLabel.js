@@ -9,11 +9,18 @@ define(['N/url', 'N/currentRecord', 'N/search'],
 
         function pageInit(context) {
             globalCurrentObj = context.currentRecord;
+            updatePrintOptions(context);
+
+            // remove temp css added by server
+            var cssElement = document.getElementById('custpage_inline_css_id');
+            if (cssElement)
+                document.getElementById('custpage_inline_css_id').remove();
         }
 
         function fieldChanged_Param(context) {
-
+            updatePrintOptions(context);
             updateExportButton(context.currentRecord);
+
 
             // when choosing a range we validate the numbers are not too high
             if (context.fieldId == 'custpage_serialnoto') {
@@ -187,6 +194,20 @@ define(['N/url', 'N/currentRecord', 'N/search'],
             }
         }
 
+        function updatePrintOptions(context) {
+
+            var selectedLabelType = context.currentRecord.getValue({
+                fieldId: 'custpage_labeltype'
+            });
+
+            var logoSelection = context.currentRecord.getField({
+                fieldId: 'custpage_logo'
+            });
+
+            if (logoSelection)
+                logoSelection.isDisplay = (selectedLabelType === 'PL2');
+        }
+
         function updateExportButton(currentRecord) {
 
             var lines = currentRecord.getLineCount({
@@ -209,12 +230,6 @@ define(['N/url', 'N/currentRecord', 'N/search'],
                 }
 
             }
-
-            //var exportBtn = currentRecord.getField({fieldId: 'submitter'});
-            //var exportBtn2 = currentRecord.getField({fieldId: 'secondarysubmitter'});
-
-            //exportBtn.isDisabled = !exportEnabled;
-            //exportBtn2.isDisabled = !exportEnabled;
         }
 
         function onSearch() {
