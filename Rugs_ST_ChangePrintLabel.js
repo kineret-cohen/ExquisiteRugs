@@ -10,6 +10,8 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
 
         var SAMLPE_CATEGORY_SIZE = '1\'X1\'6"';
 
+        var LOGOS_FOLDER = 'Web Site Hosting Files/Live Hosting Files/Logo/';
+
         function onRequest(context) {
 
             try {
@@ -36,6 +38,7 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
                     log.debug('deploymentId', deploymentId);
                     log.debug('searchAction', searchAction);
 
+
                     buildSearchOptions(form);
 
                     // chcek if this is a search request
@@ -43,20 +46,16 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
 
                         var sublist = buildResultsTable(form);
 
-                        var isRugs = true;
-
                         // check what query we should build - start with items
                         var searchQuery = buildItemsQuery(context);
 
                         // if not, try serial number/transaction based
                         if (!searchQuery)
                             searchQuery = buildSerialNumbersQuery(context);
-                        else
-                            isRugs = false;
 
                         if (searchQuery) {
                             processSearchResults(searchQuery, sublist);
-                            buildPrintOptions(context, form, isRugs);
+                            buildPrintOptions(context, form);
                         }
                     }
 
@@ -152,7 +151,7 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
 
         }
 
-        function buildPrintOptions(context, form, isRugs) {
+        function buildPrintOptions(context, form) {
 
             // Build the filters and button in the returned form
             form.addSubmitButton({
@@ -196,71 +195,57 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
                 label: 'Inline CSS'
             }).defaultValue = '<style id="custpage_inline_css_id" type="text/css"> div[data-field-name=custpage_logo] { display: none; }</style>';
 
-            if (isRugs) {
-                // label type options
-                labelType.addSelectOption({
-                    value: "ER",
-                    text: "Exquisite Rugs",
-                    isSelected: formLabelType == "ER"
-                });
-                labelType.addSelectOption({
-                    value: "SL",
-                    text: "Studio Library",
-                    isSelected: formLabelType == "SL"
-                });
-                labelType.addSelectOption({
-                    value: "UPC",
-                    text: "UPC Code",
-                    isSelected: formLabelType == "UPC"
-                });
-                labelType.addSelectOption({
-                    value: "MET",
-                    text: "MET",
-                    isSelected: formLabelType == "MET"
-                });
-                labelType.addSelectOption({
-                    value: "PL",
-                    text: "Private Label",
-                    isSelected: formLabelType == "PL"
-                });
-                labelType.addSelectOption({
-                    value: "PL2",
-                    text: "Private Label (Logo)",
-                    isSelected: formLabelType == "PL2"
-                });
+            // label type options
+            labelType.addSelectOption({
+                value: "ER",
+                text: "Exquisite Rugs",
+                isSelected: formLabelType == "ER"
+            });
+            labelType.addSelectOption({
+                value: "SL",
+                text: "Studio Library",
+                isSelected: formLabelType == "SL"
+            });
+            labelType.addSelectOption({
+                value: "UPC",
+                text: "UPC Code",
+                isSelected: formLabelType == "UPC"
+            });
+            labelType.addSelectOption({
+                value: "MET",
+                text: "MET",
+                isSelected: formLabelType == "MET"
+            });
+            labelType.addSelectOption({
+                value: "PL",
+                text: "Private Label",
+                isSelected: formLabelType == "PL"
+            });
+            labelType.addSelectOption({
+                value: "PL2",
+                text: "Private Label (Logo)",
+                isSelected: formLabelType == "PL2"
+            });
 
-                // page size options
-                pageSize.addSelectOption({
-                    value: "1",
-                    text: "Letter",
-                    isSelected: formPageSize == "1"
-                });
-                pageSize.addSelectOption({
-                    value: "2",
-                    text: "UPS Sticker",
-                    isSelected: formPageSize == "2"
-                });
+            // page size options
+            pageSize.addSelectOption({
+                value: "1",
+                text: "Letter",
+                isSelected: formPageSize == "1"
+            });
+            pageSize.addSelectOption({
+                value: "2",
+                text: "UPS Sticker",
+                isSelected: formPageSize == "2"
+            });
 
 
-                // logo options
-                var logoOptions = ["Stellas Finishing Touches", "Shehadi", "SH Designs", "Robb and Stucky", "Olivia’s Home Furnishings", "Nouvelle", "Norris Furniture", "Nature Works", "M Grossman", "judith norman", "John Strauss", "J Sandler", "Haven Home", "Exclusive Flooring", "Door County", "Cabot House Furniture", "Bay Design Black White", "Artistic Elements", "Annette Tatum", "Aesthetics"];
-                logoOptions.forEach(function(item) {
-                    addLogoOption(logo, item, formLogo);
-                });
-
-            } else {
-                labelType.addSelectOption({
-                    value: "SL",
-                    text: "Studio Library",
-                    isSelected: formLabelType == "SL"
-                });
-
-                pageSize.addSelectOption({
-                    value: "1",
-                    text: "Letter",
-                    isSelected: formPageSize == "1"
-                });
-            }
+            // logo options
+            var folderID = getFolderIdFromPath(LOGOS_FOLDER);
+            logoOptions = getFilesInFolder(folderID);
+            logoOptions.forEach(function(item) {
+                addLogoOption(logo, item, formLogo);
+            });
 
         }
 
@@ -1250,11 +1235,11 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
             return '<td colspan="' + colspan + '" rowspan="' + rowspan + '"> </td>';
         }
 
-        function addLogoOption(element, text, currentValue) {
+        function addLogoOption(element, fileName, currentValue) {
             element.addSelectOption({
-                value: toSnakeCase(text),
-                text: text,
-                isSelected: currentValue == toSnakeCase(text)
+                value: fileName,
+                text: FileName2DisplayName(fileName),
+                isSelected: currentValue == fileName
             });
         }
 
@@ -1264,7 +1249,7 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
             if (name != 'none') {
                 try {
                     var fileObj = file.load({
-                        id: 'Web Site Hosting Files/Live Hosting Files/Logo/' + name + '.jpg'
+                        id: LOGOS_FOLDER + name
                     }).getContents();
                     element += '<img src="data:image/jpeg;base64,' + fileObj + '" style="width: ' + width + 'px;height: ' + height + ';" />';
                 } catch (e) {
@@ -1273,8 +1258,6 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
             }
 
             element += '</div></td>';
-            log.debug("element", element);
-
             return element;
         }
 
@@ -1301,6 +1284,84 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
             return value && value != '0';
         }
 
+
+        function getFolderIdFromPath(folderPath) {
+            var pathParts = folderPath.split('/').filter(function(part) {
+                return part !== ''; // Remove empty strings
+            });
+
+            var currentFolderId = null;
+
+            // Loop through each part of the folder path to find the folder
+            for (var i = 0; i < pathParts.length; i++) {
+                var folderName = pathParts[i];
+
+                log.debug('Current Folder ID', currentFolderId);
+                log.debug('Folder Part', folderName);
+
+                // Search for the folder with the current parent folder and folder name
+                var folderSearch = search.create({
+                    type: search.Type.FOLDER,
+                    filters: [
+                        ['parent', 'anyof', currentFolderId || '@NONE@'], // Parent folder (root if first)
+                        'AND', ['name', 'is', folderName], // Folder name matches
+                        'AND', ['isinactive', 'is', 'F'] // Ensure the folder is active (optional)
+                    ],
+                    columns: ['internalid', 'name']
+                });
+
+                var folderResults = folderSearch.run().getRange({
+                    start: 0,
+                    end: 1
+                });
+
+                if (folderResults.length > 0) {
+                    // Update the currentFolderId to the found folder's internal ID
+                    currentFolderId = folderResults[0].getValue('internalid');
+                } else {
+                    // Folder not found, return null
+                    return null;
+                }
+            }
+
+            // Return the final folder ID
+            return currentFolderId;
+        }
+
+
+        function getFilesInFolder(folderId) {
+            var files = [];
+
+            // Search for files in the folder (Correct record type is 'file')
+            var fileSearch = search.create({
+                type: 'folder',
+                filters: [
+                    ['internalid', 'is', folderId]
+                ],
+                columns: [
+                    search.createColumn({
+                        name: 'name',
+                        join: 'file'
+                    })
+                ]
+            });
+
+            var fileResults = fileSearch.run().getRange({
+                start: 0,
+                end: 1000
+            });
+
+            // Process each file in the result set
+            fileResults.forEach(function(fileResult) {
+                files.push(fileResult.getValue({
+                    name: 'name',
+                    join: 'file'
+                }));
+            });
+
+            return files;
+        }
+
         function safeHTML(text) {
             var table = {
                 '<': 'lt',
@@ -1317,11 +1378,20 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
             });
         }
 
-        function toSnakeCase(str) {
-            return str
-                .replace(/([a-z])([A-Z])/g, '$1_$2') // Add an underscore between lowercase and uppercase letters
-                .replace(/[\s\-]+/g, '_') // Replace spaces and hyphens with underscores
-                .toLowerCase();
+        function FileName2DisplayName(fileName) {
+            // Remove the file extension (e.g., .jpg, .txt)
+            const nameWithoutExtension = fileName.split('.')[0];
+
+            // Split the file name by underscores and dashes (handle common delimiters)
+            const words = nameWithoutExtension.split(/[_-]+/);
+
+            // Capitalize the first letter of each word and lowercase the rest
+            const capitalizedWords = words.map(function(word) {
+                return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+            });
+
+            // Join the capitalized words back together with spaces
+            return capitalizedWords.join(' ');
         }
 
         function GetDateFormat() {
@@ -1349,7 +1419,6 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
                 if (ss < 10) {
                     ss = "0" + ss;
                 }
-                log.debug('dd - month - yyyy - hh - mm - ss ', dd + " - " + month + " - " + yyyy + " - " + hh + " - " + mm + " - " + ss);
                 dateFormat = month + "" + dd + "" + yyyy + "_" + hh + mm + ss;
                 return dateFormat;
             } catch (ex) {
