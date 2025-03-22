@@ -102,7 +102,7 @@ BEGIN
 		insert into er_stage_variation_inventory(  variation_id, product_id, sku, size, meta_id, current_value, new_value)
 		select a.variation_id, a.product_id, d.sku, b.size, c.meta_id, 
 		c.stock_status as current_value, 
-		case when e.in_stock is null or e.in_stock = 0 then 'outofstock' else 'instock' end as new_value
+		case when e.in_stock is null or e.in_stock = 0 then 'onbackorder' else 'instock' end as new_value
 		from
 		(select id as variation_id, post_parent as product_id
 		from hbi_posts
