@@ -7,6 +7,7 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
 
         var PAGE_SIZE_LETTER = 1;
         var PAGE_SIZE_UPS = 2;
+        var PAGE_SIZE_4X3 = 3;
 
         var SAMLPE_CATEGORY_SIZE = '1\'X1\'6"';
 
@@ -237,6 +238,11 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
                 value: "2",
                 text: "UPS Sticker",
                 isSelected: formPageSize == "2"
+            });
+            pageSize.addSelectOption({
+                value: "3",
+                text: "4x3",
+                isSelected: formPageSize == "3"
             });
 
 
@@ -1027,8 +1033,10 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
                     xml += '<pdf><head><meta name="title" value="PRINT LABEL"/><style type="text/css">body {font-family: Arial, sans-serif; font-weight: bold;} table {font-size: 10pt;table-layout: fixed;} td { padding:4px; margin:0px; }</style></head>';
                     if (pageSize == PAGE_SIZE_LETTER)
                         xml += '<body padding="0.25in 0.4in 0.25in 0.4in" size="Letter">';
-                    else
+                    else if (pageSize == PAGE_SIZE_UPS)
                         xml += '<body padding="0.5in 0.75in 0.5in 0.75in" height="101.6mm" width="152.4mm">';
+                    else if (pageSize == PAGE_SIZE_4X3)
+                        xml += '<body padding="0.25in 0.25in 0.25in 0.25in" height="3in" width="4in">';
                 }
 
                 // Handle table and row structure for ones that support multiple elements per row
@@ -1053,7 +1061,6 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
                 linesProcessed++;
             }
 
-
             xml += '</body></pdf>';
             xml += '</pdfset>';
 
@@ -1070,47 +1077,49 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
 
         function buildERLabel(item, pageSize) {
             var xml = '';
-            xml += '<table border="1" cellpadding="8px" style="width: 400px;padding:15px; border-style: dotted;">';
+            xml += '<table border="1" cellpadding="' + (pageSize == PAGE_SIZE_4X3 ? '4px' : '8px') + '" style="width: ' + (pageSize == PAGE_SIZE_4X3 ? '280px' : '400px') + ';padding:' + (pageSize == PAGE_SIZE_4X3 ? '8px' : '15px') + '; border-style: dotted; box-sizing: border-box;">';
             
             // Logo and barcode row
             xml += '<tr>';
-            xml += '<td colspan="6" style="width: 150px;">';
-            xml += '<p><img src="https://4951235.app.netsuite.com/core/media/media.nl?id=2106&amp;c=4951235&amp;h=ece9007b3f17bf2cc27c" style="width: 140px; height: 20px;" /></p><p style="font-size: 6pt;">WWW.EXQUISITERUGS.COM</p>';
+            xml += '<td colspan="6" style="width: ' + (pageSize == PAGE_SIZE_4X3 ? '110px' : '150px') + '; box-sizing: border-box;">';
+            xml += '<p><img src="https://4951235.app.netsuite.com/core/media/media.nl?id=2106&amp;c=4951235&amp;h=ece9007b3f17bf2cc27c" style="width: ' + (pageSize == PAGE_SIZE_4X3 ? '100px' : '140px') + '; height: 20px;" /></p><p style="font-size: 6pt;">WWW.EXQUISITERUGS.COM</p>';
             xml += '</td>';
 
             if (pageSize == PAGE_SIZE_LETTER)
-                xml += '<td colspan="6" rowspan="2" style="width: 225px; font-size: 42pt;text-align: center;">';
+                xml += '<td colspan="6" rowspan="2" style="width: 225px; font-size: 42pt;text-align: center; box-sizing: border-box;">';
+            else if (pageSize == PAGE_SIZE_UPS)
+                xml += '<td colspan="6" rowspan="2" style="width: 180px;font-size: 26pt;text-align: center; box-sizing: border-box;">';
             else
-                xml += '<td colspan="6" rowspan="2" style="width: 180px;font-size: 26pt;text-align: center;">';
+                xml += '<td colspan="6" rowspan="2" style="width: 140px;font-size: 16pt;text-align: center; box-sizing: border-box; padding: 4px;">';
 
-            xml += '<p style="text-align: center;">' + safeHTML(item.barCode) + '<barcode bar-width="2" codetype="code128" showtext="false" value="' + safeHTML(item.barCode) + '"></barcode></p>';
+            xml += '<p style="text-align: center; margin: 0; padding: 0;">' + safeHTML(item.barCode) + '<barcode bar-width="' + (pageSize == PAGE_SIZE_4X3 ? '1' : '2') + '" codetype="code128" showtext="false" value="' + safeHTML(item.barCode) + '" style="max-width: 100%;"></barcode></p>';
             xml += '</td>';
             xml += '</tr>';
 
             // Design row
             xml += '<tr>';
-            xml += '<td colspan="6">';
+            xml += '<td colspan="6" style="box-sizing: border-box;">';
             if (item.pdfDesignLabel == 'ASSRT')
-                xml += '<p>DESIGN: <span style="font-size: 18pt;line-height:18px;"><strong>' + item.pdfDesignLabel + '</strong></span></p>';
+                xml += '<p>DESIGN: <span style="font-size: ' + (pageSize == PAGE_SIZE_4X3 ? '12pt' : '18pt') + ';line-height:16px;"><strong>' + item.pdfDesignLabel + '</strong></span></p>';
             else
-                xml += '<p>DESIGN: <span style="font-size: 24pt;line-height:24px;"><strong>' + item.pdfDesignLabel + '</strong></span></p>';
+                xml += '<p>DESIGN: <span style="font-size: ' + (pageSize == PAGE_SIZE_4X3 ? '14pt' : '24pt') + ';line-height:20px;"><strong>' + item.pdfDesignLabel + '</strong></span></p>';
 
             xml += '</td>';
             xml += '</tr>';
 
             // Size and Collection rows
-            xml += getXMLRow('SIZE', item.pdfSize, 12, 'font-size:16pt;');
+            xml += getXMLRow('SIZE', item.pdfSize, 12, 'font-size:' + (pageSize == PAGE_SIZE_4X3 ? '9pt' : '16pt') + ';line-height:12px;');
             xml += (item.pdfCollection.length < 12 && pageSize == PAGE_SIZE_LETTER) ?
                 getXMLRow('COLLECTION', item.pdfCollection, 12, 'font-size:30pt;line-height:18px;') :
-                getXMLRow('COLLECTION', item.pdfCollection, 12, 'font-size:18pt;line-height:18px;');
+                getXMLRow('COLLECTION', item.pdfCollection, 12, 'font-size:' + (pageSize == PAGE_SIZE_4X3 ? '12pt' : '18pt') + ';line-height:16px;');
 
             // Content and QR Code row
-            var row = getXMLCell('CONTENT', item.pdfContent, 9, 'font-size:10pt;line-height:10px;');
-            row += getQRCode(item.pdfDesignLabel, 40, 3, 2, item.qrCode);
+            var row = getXMLCell('CONTENT', item.pdfContent, 9, 'font-size:9pt;line-height:10px;');
+            row += getQRCode(item.pdfDesignLabel, 35, 3, 2, item.qrCode);
             xml += toXMLRow(row);
 
             // Origin row
-            xml += getXMLRow('ORIGIN', item.pdfExqRugsOrigin, 9, 'font-size:10pt;line-height:10px;');
+            xml += getXMLRow('ORIGIN', item.pdfExqRugsOrigin, 9, 'font-size:9pt;line-height:10px;');
             
             xml += '</table>';
             if (pageSize == PAGE_SIZE_LETTER)

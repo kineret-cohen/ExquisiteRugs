@@ -195,17 +195,37 @@ define(['N/url', 'N/currentRecord', 'N/search'],
         }
 
         function updatePrintOptions(context) {
-
             var selectedLabelType = context.currentRecord.getValue({
                 fieldId: 'custpage_labeltype'
             });
 
+            var pageSizeField = context.currentRecord.getField({
+                fieldId: 'custpage_pagesize'
+            });
+
+            // Set Letter as selection when not ER, but only if it's not already set
+            if (selectedLabelType !== "ER") {
+                var currentPageSize = context.currentRecord.getValue({
+                    fieldId: 'custpage_pagesize'
+                });
+                if (currentPageSize !== "1") {
+                    context.currentRecord.setValue({
+                        fieldId: 'custpage_pagesize',
+                        value: "1"
+                    });
+                }
+            }
+
+            // Disable/enable page size field based on label type
+            pageSizeField.isDisabled = (selectedLabelType !== "ER");
+
+            // Update logo field visibility
             var logoSelection = context.currentRecord.getField({
                 fieldId: 'custpage_logo'
             });
-
-            if (logoSelection)
+            if (logoSelection) {
                 logoSelection.isDisplay = (selectedLabelType === 'PL2');
+            }
         }
 
         function updateExportButton(currentRecord) {
@@ -233,7 +253,6 @@ define(['N/url', 'N/currentRecord', 'N/search'],
         }
 
         function onSearch() {
-
             var paramObj = {};
             paramObj["searchAction"] = "true";
             addParamValue('custpage_doctype', paramObj, 'formDocType');
@@ -244,7 +263,6 @@ define(['N/url', 'N/currentRecord', 'N/search'],
             addParamValue('custpage_pagesize', paramObj, 'formPageSize');
             addParamText('custpage_serialnumbers', paramObj, 'formSerialNumbers', true);
             addParamValue('custpage_items', paramObj, 'formItems', true);
-
 
             window.onbeforeunload = null;
             document.location = url.resolveScript({
@@ -258,7 +276,6 @@ define(['N/url', 'N/currentRecord', 'N/search'],
             var value = globalCurrentObj.getValue({
                 fieldId: filedId
             });
-
             addParam(paramObj, paramName, value, multiple);
         }
 
@@ -266,7 +283,6 @@ define(['N/url', 'N/currentRecord', 'N/search'],
             var value = globalCurrentObj.getText({
                 fieldId: filedId
             });
-
             addParam(paramObj, paramName, value, multiple);
         }
 
@@ -278,7 +294,6 @@ define(['N/url', 'N/currentRecord', 'N/search'],
                     paramObj[paramName] = value;
             }
         }
-
 
         function getParameterFromURL(param) {
             var query = window.location.search.substring(1);
