@@ -963,232 +963,91 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
         }
 
 
-        function addPDF(pageSize, items, startIndex, length, pdfFiles) {
+        function getLabelInfo(item, pageSize, linesProcessed, isLastItem) {
+            var labelInfo = {
+                content: '',
+                requiresPageBreak: false,
+                multiElementsPerRow: false
+            };
 
+            switch(item.labelType) {
+                case "ER":
+                    labelInfo.content = buildERLabel(item, pageSize);
+                    break;
+                case "PL":
+                    labelInfo.content = buildPLLabel(item, pageSize);
+                    break;
+                case "PL2":
+                    labelInfo.content = buildPL2Label(item, pageSize);
+                    labelInfo.multiElementsPerRow = true;
+                    break;
+                case "UPC":
+                    labelInfo.content = buildUPCLabel(item, pageSize);
+                    break;
+                case "MET":
+                    labelInfo.content = buildMETLabel(item, pageSize);
+                    // For MET labels in letter size, check if we need a page break
+                    if (pageSize == PAGE_SIZE_LETTER && linesProcessed > 0 && linesProcessed % 3 == 0) {
+                        labelInfo.requiresPageBreak = true;
+                    }
+                    break;
+                case "SL":
+                    labelInfo.content = buildSLLabel(item, pageSize);
+                    labelInfo.multiElementsPerRow = true;
+                    break;
+            }
+
+            return labelInfo;
+        }
+
+        function addPDF(pageSize, items, startIndex, length, pdfFiles) {
             log.debug('addPDF', startIndex);
 
             var xml = '<?xml version="1.0" encoding=\"UTF-8\"?>\n<!DOCTYPE pdf PUBLIC "-//big.faceless.org//report" "report-1.1.dtd">\n';
             xml += '<pdfset>';
-            xml += '<pdf>';
-            xml += '<head>';
-            xml += '<meta name="title" value="PRINT LABEL"/>';
-            xml += '<style type="text/css">body {font-family: Arial, sans-serif; font-weight: bold;} table {font-size: 10pt;table-layout: fixed;} td { padding:4px; margin:0px; }</style>';
-            xml += '</head>';
-
-            if (pageSize == PAGE_SIZE_LETTER)
-                xml += '<body padding="0.25in 0.4in 0.25in 0.4in" size="Letter">';
-            else
-                xml += '<body padding="0.5in 0.75in 0.5in 0.75in" height="101.6mm" width="152.4mm">';
-
+            
             var linesProcessed = 0;
             var labelType = '';
             length = (startIndex + length) < items.length ? length : items.length - startIndex;
 
             // iterate on the items and add to XML
             for (var i = startIndex; i < startIndex + length; i++) {
-
                 var item = items[i];
                 labelType = item.labelType;
+                var isLastItem = i == startIndex + length - 1;
 
-                if (item.labelType == "ER" || item.labelType == "UPC" || item.labelType == "PL")
-                    xml += '<table border="1" cellpadding="8px" style="width: 400px;padding:15px; border-style: dotted;">';
-                else if (item.labelType == "MET")
-                    xml += '<table border="1" cellpadding="2px" style="width: 400px;padding:15px; border-style: dotted;">';
-                else { // SL pr PL2
-                    // extrenal table to create 2 columns
+                // Get label info from the specific label builder
+                var labelInfo = getLabelInfo(item, pageSize, linesProcessed, isLastItem);
+                
+                // Handle page break or initial page setup
+                if (linesProcessed == 0 || labelInfo.requiresPageBreak) {
+                    if (linesProcessed > 0) {
+                        xml += '</body></pdf>';
+                    }
+                    xml += '<pdf><head><meta name="title" value="PRINT LABEL"/><style type="text/css">body {font-family: Arial, sans-serif; font-weight: bold;} table {font-size: 10pt;table-layout: fixed;} td { padding:4px; margin:0px; }</style></head>';
+                    if (pageSize == PAGE_SIZE_LETTER)
+                        xml += '<body padding="0.25in 0.4in 0.25in 0.4in" size="Letter">';
+                    else
+                        xml += '<body padding="0.5in 0.75in 0.5in 0.75in" height="101.6mm" width="152.4mm">';
+                }
+
+                // Handle table and row structure for ones that support multiple elements per row
+                if (labelInfo.multiElementsPerRow) {
                     if (linesProcessed == 0)
                         xml += '<table>';
-
-                    // wrap every 2 in a row
                     if (linesProcessed % 2 == 0)
                         xml += '<tr style="padding-top:10px">';
-
-                    if (item.labelType == "PL2")
-                        xml += '<td><table border="1" cellpadding="4px" style="width: 300px; border-style: dotted; border-color:gray;">';
-                    else
-                        xml += '<td><table border="1" cellpadding="4px" style="width: 345px; border-style: dotted; border-color:gray;">';
                 }
 
-                // first 2 rows
-                // image & design on the left & barcode on the right
-                xml += '<tr>';
+                // Add label content
+                xml += labelInfo.content;
 
-                if (item.labelType == "ER") {
-                    xml += '<td colspan="6" style="width: 150px;">';
-                    xml += '<p><img src="https://4951235.app.netsuite.com/core/media/media.nl?id=2106&amp;c=4951235&amp;h=ece9007b3f17bf2cc27c" style="width: 140px; height: 20px;" /></p><p style="font-size: 6pt;">WWW.EXQUISITERUGS.COM</p>';
-                    xml += '</td>';
-
-                    if (pageSize == PAGE_SIZE_LETTER)
-                        xml += '<td colspan="6" rowspan="2" style="width: 225px; font-size: 42pt;text-align: center;">';
-                    else
-                        xml += '<td colspan="6" rowspan="2" style="width: 180px;font-size: 26pt;text-align: center;">';
-
-                    xml += '<p style="text-align: center;">' + safeHTML(item.barCode) + '<barcode bar-width="2" codetype="code128" showtext="false" value="' + safeHTML(item.barCode) + '"></barcode></p>';
-                    xml += '</td>';
-                } else if (item.labelType == "PL") {
-
-                    if (pageSize == PAGE_SIZE_LETTER)
-                        xml += '<td colspan="12" style="padding: 0;font-size: 42pt;text-align: center;">';
-                    else
-                        xml += '<td colspan="12" style="padding: 0;font-size: 26pt;text-align: center;">';
-
-                    xml += '<p style="text-align: center;margin:0 auto;">' + safeHTML(item.barCode) + '<barcode bar-width="2" style="width: 100%;" codetype="code128" showtext="false" value="' + safeHTML(item.barCode) + '"></barcode></p>';
-                    xml += '</td>';
-                } else if (item.labelType == "PL2") {
-                    xml += getLogo(item.logo, 140, 70, 6, 2);
-                    xml += '<td colspan="6" style="font-size: 32pt;text-align: right;">';
-                    xml += '<p style="text-align: right;margin:0 auto;"><barcode bar-width="1" style="width: 140px;" codetype="code128" showtext="false" value="' + safeHTML(item.barCode) + '"></barcode></p>';
-                    xml += '</td>';
-                } else if (item.labelType == "UPC") {
-                    log.debug('addPDF', "UPC Specific Start...");
-
-                    xml += '<td colspan="6" style="width: 150px;">';
-                    xml += '<p><img src="https://4951235.app.netsuite.com/core/media/media.nl?id=2106&amp;c=4951235&amp;h=ece9007b3f17bf2cc27c" style="width: 140px; height: 20px;" /></p><p style="font-size: 6pt;">WWW.EXQUISITERUGS.COM</p>';
-                    xml += '</td>';
-
-                    xml += '<td colspan="6" rowspan="2" style="width: 120px;font-size: 10pt;text-align: center;">';
-                    xml += '<p style="text-align: center;">' + safeHTML(item.barCode) + '<barcode bar-width="1" codetype="code128" showtext="false" value="' + safeHTML(item.barCode) + '"></barcode></p>';
-                    xml += '</td>';
-                    log.debug('addPDF', "UPC Specific End...");
-                } else if (item.labelType == "MET") {
-                    xml += '<td colspan="12" style="width: 210px;margin-bottom:10px">';
-                    xml += '<p><img src="https://4951235.app.netsuite.com/core/media/media.nl?id=96860&amp;c=4951235&amp;h=qGyFvV7IgP4qHpc42AJWvaZImF7JxdQEwqFKHbPN8D7d8iVM" style="width: 210px; height: 35px;" /></p>';
-                    xml += '</td>';
-
-                } else { // item.labelType == "SL"
-                    xml += '<td colspan="4">';
-                    xml += '<img src="https://4951235.app.netsuite.com/core/media/media.nl?id=10998&amp;c=4951235&amp;h=qD1ob0v4w04aBj-z-4MzzsdBLhLSfUneQKTXYyKSO0G5tp2-" style="width: 100px; height: 16px;" />';
-                    xml += '</td>';
-
-                    xml += '<td colspan="8" style="width: 140px;">';
-                    xml += '<p style="font-size: 14pt;text-align: center;">' +
-                        (item.pdfSize == SAMLPE_CATEGORY_SIZE ? '' : safeHTML(item.barCode)) +
-                        '<barcode height="22" width="160" codetype="code128" showtext="false" value="' + safeHTML(item.barCode) + '"></barcode></p>';
-                    xml += '</td>';
-                }
-
-                xml += '</tr>';
-
-                if (item.labelType == "ER") {
-
-                    xml += '<tr>';
-                    xml += '<td colspan="6">';
-                    if (item.pdfDesignLabel == 'ASSRT')
-                        xml += '<p>DESIGN: <span style="font-size: 18pt;line-height:18px;"><strong>' + item.pdfDesignLabel + '</strong></span></p>';
-                    else
-                        xml += '<p>DESIGN: <span style="font-size: 24pt;line-height:24px;"><strong>' + item.pdfDesignLabel + '</strong></span></p>';
-
-                    xml += '</td>';
-                    xml += '</tr>';
-
-                    xml += getXMLRow('SIZE', item.pdfSize, 12, 'font-size:16pt;');
-
-                    xml += (item.pdfCollection.length < 12 && pageSize == PAGE_SIZE_LETTER) ?
-                        getXMLRow('COLLECTION', item.pdfCollection, 12, 'font-size:30pt;line-height:18px;') :
-                        getXMLRow('COLLECTION', item.pdfCollection, 12, 'font-size:18pt;line-height:18px;');
-
-                    row = getXMLCell('CONTENT', item.pdfContent, 9, 'font-size:10pt;line-height:10px;');
-                    row += getQRCode(item.pdfDesignLabel, 40, 3, 2, item.qrCode);
-                    xml += toXMLRow(row);
-                    xml += getXMLRow('ORIGIN', item.pdfExqRugsOrigin, 9, 'font-size:10pt;line-height:10px;');
-                    xml += '</table>';
-                    if (pageSize == PAGE_SIZE_LETTER)
-                        xml += '<p style="width:100%;border-top:1px dotted #999;margin:15px 0"></p>';
-
-                } else if (item.labelType == "PL") {
-
-                    var code = 'X00' + item.pdfDesignLabel.substring(0, 4) + 'A' + item.pdfCollection.substring(0, 3).toUpperCase();
-                    xml += toXMLRow('<td colspan="12" align="right" style="padding: 0;font-size:10pt;font-weight:normal">' + code + '</td>');
-
-                    xml += getXMLRow('SIZE', item.pdfSize, 12, 'font-size:14pt');
-                    xml += getXMLRow('CONTENT', item.pdfContent, 12, 'font-size:14pt');
-                    xml += getXMLRow('ORIGIN', item.pdfExqRugsOrigin, 12, 'font-size:14pt');
-
-                    xml += '</table>';
-                    if (pageSize == PAGE_SIZE_LETTER)
-                        xml += '<p style="width:100%;border-top:1px dotted #999;margin:15px 0"></p>';
-
-                } else if (item.labelType == "PL2") {
-
-                    log.debug("private label", "starting");
-                    var code = 'X00' + item.pdfDesignLabel.substring(0, 4) + 'A' + item.pdfCollection.substring(0, 3).toUpperCase();
-                    xml += toXMLRow('<td colspan="6" align="center" style="padding: 0;font-size:11pt;font-weight:normal">' + code + '</td>');
-
-                    xml += getXMLRow('CONTENT', item.pdfContent, 12, 'font-size:10pt;line-height:10px;');
-                    xml += getXMLRow('ORIGIN', item.pdfExqRugsOrigin, 12, 'font-size:10pt;line-height:10px;');
-                    xml += getXMLRow('SIZES', item.programSize, 12, 'font-size:10pt;line-height:10px;');
-                    //xml += '</table>';
-                    //if (pageSize == PAGE_SIZE_LETTER)
-                    //    xml += '<p style="width:100%;border-top:1px dotted #999;margin:15px 0"></p>';
-
-                    xml += '</table></td>';
-
-
-                    // extrnal table tags
-                    // wrap every 2 in a row
+                // Handle table and row structure for ones that support multiple elements per row
+                if (labelInfo.multiElementsPerRow) {
                     if (linesProcessed % 2 == 1 || linesProcessed == length - 1)
                         xml += '</tr>';
-
-                    // last element - close the table
-                    if (linesProcessed == length - 1)
+                    if (linesProcessed == length - 1) 
                         xml += '</table>';
-
-                } else if (item.labelType == "MET") {
-
-                    log.debug('addPDF', "MET Specific Start...");
-                    row = getXMLCell('DESIGN', item.pdfDesignLabel, 6, 'font-size:14pt;');
-                    row += '<td colspan="6" style="font-size:16pt;text-align:center;">' + safeHTML(item.barCode) + '</td>';
-                    xml += toXMLRow(row);
-
-                    row = getXMLCell('SIZE', item.pdfSize, 6, 'font-size:14pt;');
-                    row += '<td colspan="6" style="text-align:center;"><barcode bar-width="1" codetype="code128" showtext="false" value="' + safeHTML(item.barCode) + '"></barcode></td>';
-                    xml += toXMLRow(row);
-
-                    xml += getXMLRow('COLLECTION', item.pdfCollection, 12, 'font-size:14pt;');
-                    xml += getXMLRow('CONTENT', item.pdfContent, 12, 'font-size:14pt;');
-
-                    // 2 rows 
-                    row = getXMLCell('ORIGIN', item.pdfExqRugsOrigin, 9, 'font-size:14pt;');
-                    row += getQRCode("MET_" + item.pdfDesignLabel, 60, 3, 2, item.qrCode);
-                    xml += toXMLRow(row);
-                    xml += toXMLRow(getFooter(item.pdfMet, '&copy;The Metropolitan Museum of Art', 9));
-
-                    xml += '</table>';
-
-                    if (pageSize == PAGE_SIZE_LETTER)
-                        xml += '<p style="width:100%;border-top:1px dotted #999;margin:15px 0"></p>';
-
-                    // force a page break every 3 lables
-                    if (linesProcessed % 3 == 2 && linesProcessed < length - 1)
-                        xml += '<pbr/>';
-
-                    log.debug('addPDF', "MET Specific End...");
-
-                } else if (item.labelType == "SL") {
-                    xml += getXMLRow('DESIGN', item.pdfDesignLabel, 12, 'font-size:18pt');
-
-                    xml += getXMLRow('COLLECTION', item.pdfCollection, 12);
-
-                    row = getXMLCell('CONTENT', item.pdfContent, 9);
-                    row += getQRCode(item.pdfDesignLabel, 40, 3, 2, item.qrCode);
-                    xml += toXMLRow(row);
-                    xml += getXMLRow('ORIGIN', item.pdfExqRugsOrigin, 9);
-
-                    xml += getXMLRow('SIZES', item.programSize, 12, 'font-size:10pt');
-
-                    xml += '</table></td>';
-
-                    // extrnal table tags
-                    // wrap every 2 in a row
-                    if (linesProcessed % 2 == 1 || linesProcessed == length - 1)
-                        xml += '</tr>';
-
-                    // last element - close the table
-                    if (linesProcessed == length - 1)
-                        xml += '</table>';
-                } else { //item.labelType == "UPC")
-                    xml += '</table>';
-                    xml += '<p style="width:100%;border-top:1px dotted #999;margin:15px 0"></p>';
                 }
 
                 linesProcessed++;
@@ -1197,8 +1056,6 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
 
             xml += '</body></pdf>';
             xml += '</pdfset>';
-
-            //log.debug('addPDF', xml);
 
             // rendered the XML as PDF
             var renderer = render.create();
@@ -1211,6 +1068,209 @@ define(['N/ui/serverWidget', 'N/record', 'N/search', 'N/redirect', 'N/render', '
             pdfFiles.push(newfile);
         }
 
+        function buildERLabel(item, pageSize) {
+            var xml = '';
+            xml += '<table border="1" cellpadding="8px" style="width: 400px;padding:15px; border-style: dotted;">';
+            
+            // Logo and barcode row
+            xml += '<tr>';
+            xml += '<td colspan="6" style="width: 150px;">';
+            xml += '<p><img src="https://4951235.app.netsuite.com/core/media/media.nl?id=2106&amp;c=4951235&amp;h=ece9007b3f17bf2cc27c" style="width: 140px; height: 20px;" /></p><p style="font-size: 6pt;">WWW.EXQUISITERUGS.COM</p>';
+            xml += '</td>';
+
+            if (pageSize == PAGE_SIZE_LETTER)
+                xml += '<td colspan="6" rowspan="2" style="width: 225px; font-size: 42pt;text-align: center;">';
+            else
+                xml += '<td colspan="6" rowspan="2" style="width: 180px;font-size: 26pt;text-align: center;">';
+
+            xml += '<p style="text-align: center;">' + safeHTML(item.barCode) + '<barcode bar-width="2" codetype="code128" showtext="false" value="' + safeHTML(item.barCode) + '"></barcode></p>';
+            xml += '</td>';
+            xml += '</tr>';
+
+            // Design row
+            xml += '<tr>';
+            xml += '<td colspan="6">';
+            if (item.pdfDesignLabel == 'ASSRT')
+                xml += '<p>DESIGN: <span style="font-size: 18pt;line-height:18px;"><strong>' + item.pdfDesignLabel + '</strong></span></p>';
+            else
+                xml += '<p>DESIGN: <span style="font-size: 24pt;line-height:24px;"><strong>' + item.pdfDesignLabel + '</strong></span></p>';
+
+            xml += '</td>';
+            xml += '</tr>';
+
+            // Size and Collection rows
+            xml += getXMLRow('SIZE', item.pdfSize, 12, 'font-size:16pt;');
+            xml += (item.pdfCollection.length < 12 && pageSize == PAGE_SIZE_LETTER) ?
+                getXMLRow('COLLECTION', item.pdfCollection, 12, 'font-size:30pt;line-height:18px;') :
+                getXMLRow('COLLECTION', item.pdfCollection, 12, 'font-size:18pt;line-height:18px;');
+
+            // Content and QR Code row
+            var row = getXMLCell('CONTENT', item.pdfContent, 9, 'font-size:10pt;line-height:10px;');
+            row += getQRCode(item.pdfDesignLabel, 40, 3, 2, item.qrCode);
+            xml += toXMLRow(row);
+
+            // Origin row
+            xml += getXMLRow('ORIGIN', item.pdfExqRugsOrigin, 9, 'font-size:10pt;line-height:10px;');
+            
+            xml += '</table>';
+            if (pageSize == PAGE_SIZE_LETTER)
+                xml += '<p style="width:100%;border-top:1px dotted #999;margin:15px 0"></p>';
+
+            return xml;
+        }
+
+        function buildPLLabel(item, pageSize) {
+            var xml = '';
+            xml += '<table border="1" cellpadding="2px" style="width: 400px;padding:14px; border-style: dotted;">';
+            
+            // Barcode row
+            xml += '<tr>';
+            if (pageSize == PAGE_SIZE_LETTER)
+                xml += '<td colspan="12" style="padding: 0;font-size: 42pt;text-align: center;">';
+            else
+                xml += '<td colspan="12" style="padding: 0;font-size: 26pt;text-align: center;">';
+
+            xml += '<p style="text-align: center;margin:0 auto;">' + safeHTML(item.barCode) + '<barcode bar-width="2" style="width: 100%;" codetype="code128" showtext="false" value="' + safeHTML(item.barCode) + '"></barcode></p>';
+            xml += '</td>';
+            xml += '</tr>';
+
+            // Code row
+            var code = 'X00' + item.pdfDesignLabel.substring(0, 4) + 'A' + item.pdfCollection.substring(0, 3).toUpperCase();
+            xml += toXMLRow('<td colspan="12" align="center" style="padding: 0;font-size:10pt;line-height:24px;font-weight:normal">' + code + '</td>');
+
+            // Size, Content, and Origin rows
+            xml += getXMLRow('SIZE', item.pdfSize, 12, 'font-size:14pt;line-height:24px;');
+            xml += getXMLRow('CONTENT', item.pdfContent, 12, 'font-size:14pt;line-height:24px;');
+            xml += getXMLRow('ORIGIN', item.pdfExqRugsOrigin, 12, 'font-size:14pt;line-height:24px;');
+
+            xml += '</table>';
+            if (pageSize == PAGE_SIZE_LETTER)
+                xml += '<p style="width:100%;border-top:1px dotted #999;margin:14px 0"></p>';
+
+            return xml;
+        }
+
+        function buildPL2Label(item, pageSize) {
+            var xml = '';
+            xml += '<td><table border="1" cellpadding="4px" style="width: 300px; border-style: dotted; border-color:gray;">';
+            
+            // Logo and barcode row
+            xml += '<tr>';
+            xml += getLogo(item.logo, 140, 70, 6, 2);
+            xml += '<td colspan="6" style="font-size: 32pt;text-align: right;">';
+            xml += '<p style="text-align: right;margin:0 auto;"><barcode bar-width="1" style="width: 140px;" codetype="code128" showtext="false" value="' + safeHTML(item.barCode) + '"></barcode></p>';
+            xml += '</td>';
+            xml += '</tr>';
+
+            // Code row
+            var code = 'X00' + item.pdfDesignLabel.substring(0, 4) + 'A' + item.pdfCollection.substring(0, 3).toUpperCase();
+            xml += toXMLRow('<td colspan="6" align="center" style="padding: 0;font-size:11pt;font-weight:normal">' + code + '</td>');
+
+            // Content, Origin, and Sizes rows
+            xml += getXMLRow('CONTENT', item.pdfContent, 12, 'font-size:10pt;line-height:10px;');
+            xml += getXMLRow('ORIGIN', item.pdfExqRugsOrigin, 12, 'font-size:10pt;line-height:10px;');
+            xml += getXMLRow('SIZES', item.programSize, 12, 'font-size:10pt;line-height:10px;');
+
+            xml += '</table></td>';
+            return xml;
+        }
+
+        function buildUPCLabel(item, pageSize) {
+            var xml = '';
+            xml += '<table border="1" cellpadding="8px" style="width: 400px;padding:15px; border-style: dotted;">';
+            
+            // Logo and barcode row
+            xml += '<tr>';
+            xml += '<td colspan="6" style="width: 150px;">';
+            xml += '<p><img src="https://4951235.app.netsuite.com/core/media/media.nl?id=2106&amp;c=4951235&amp;h=ece9007b3f17bf2cc27c" style="width: 140px; height: 20px;" /></p><p style="font-size: 6pt;">WWW.EXQUISITERUGS.COM</p>';
+            xml += '</td>';
+
+            xml += '<td colspan="6" rowspan="2" style="width: 120px;font-size: 10pt;text-align: center;">';
+            xml += '<p style="text-align: center;">' + safeHTML(item.barCode) + '<barcode bar-width="1" codetype="code128" showtext="false" value="' + safeHTML(item.barCode) + '"></barcode></p>';
+            xml += '</td>';
+            xml += '</tr>';
+
+            xml += '</table>';
+            xml += '<p style="width:100%;border-top:1px dotted #999;margin:15px 0"></p>';
+
+            return xml;
+        }
+
+        function buildMETLabel(item, pageSize) {
+            var xml = '';
+            xml += '<table border="1" cellpadding="2px" style="width: 400px;padding:15px; border-style: dotted;">';
+            
+            // Logo row
+            xml += '<tr>';
+            xml += '<td colspan="12" style="width: 210px;margin-bottom:10px">';
+            xml += '<p><img src="https://4951235.app.netsuite.com/core/media/media.nl?id=96860&amp;c=4951235&amp;h=qGyFvV7IgP4qHpc42AJWvaZImF7JxdQEwqFKHbPN8D7d8iVM" style="width: 210px; height: 35px;" /></p>';
+            xml += '</td>';
+            xml += '</tr>';
+
+            // Design and barcode row
+            var row = getXMLCell('DESIGN', item.pdfDesignLabel, 6, 'font-size:14pt;');
+            row += '<td colspan="6" style="font-size:16pt;text-align:center;">' + safeHTML(item.barCode) + '</td>';
+            xml += toXMLRow(row);
+
+            // Size and barcode row
+            row = getXMLCell('SIZE', item.pdfSize, 6, 'font-size:14pt;');
+            row += '<td colspan="6" style="text-align:center;"><barcode bar-width="1" codetype="code128" showtext="false" value="' + safeHTML(item.barCode) + '"></barcode></td>';
+            xml += toXMLRow(row);
+
+            // Collection, Content rows
+            xml += getXMLRow('COLLECTION', item.pdfCollection, 12, 'font-size:14pt;');
+            xml += getXMLRow('CONTENT', item.pdfContent, 12, 'font-size:14pt;');
+
+            // Origin and QR Code row
+            row = getXMLCell('ORIGIN', item.pdfExqRugsOrigin, 9, 'font-size:14pt;');
+            row += getQRCode("MET_" + item.pdfDesignLabel, 60, 3, 2, item.qrCode);
+            xml += toXMLRow(row);
+
+            // Footer row
+            xml += toXMLRow(getFooter(item.pdfMet, '&copy;The Metropolitan Museum of Art', 9));
+
+            xml += '</table>';
+            if (pageSize == PAGE_SIZE_LETTER)
+                xml += '<p style="width:100%;border-top:1px dotted #999;margin:15px 0"></p>';
+
+            return xml;
+        }
+
+        function buildSLLabel(item, pageSize) {
+            var xml = '';
+            xml += '<td><table border="1" cellpadding="4px" style="width: 345px; border-style: dotted; border-color:gray;">';
+            
+            // Logo and barcode row
+            xml += '<tr>';
+            xml += '<td colspan="4">';
+            xml += '<img src="https://4951235.app.netsuite.com/core/media/media.nl?id=10998&amp;c=4951235&amp;h=qD1ob0v4w04aBj-z-4MzzsdBLhLSfUneQKTXYyKSO0G5tp2-" style="width: 100px; height: 16px;" />';
+            xml += '</td>';
+
+            xml += '<td colspan="8" style="width: 140px;">';
+            xml += '<p style="font-size: 14pt;text-align: center;">' +
+                (item.pdfSize == SAMLPE_CATEGORY_SIZE ? '' : safeHTML(item.barCode)) +
+                '<barcode height="22" width="160" codetype="code128" showtext="false" value="' + safeHTML(item.barCode) + '"></barcode></p>';
+            xml += '</td>';
+            xml += '</tr>';
+
+            // Design, Collection rows
+            xml += getXMLRow('DESIGN', item.pdfDesignLabel, 12, 'font-size:18pt');
+            xml += getXMLRow('COLLECTION', item.pdfCollection, 12);
+
+            // Content and QR Code row
+            var row = getXMLCell('CONTENT', item.pdfContent, 9);
+            row += getQRCode(item.pdfDesignLabel, 40, 3, 2, item.qrCode);
+            xml += toXMLRow(row);
+
+            // Origin row
+            xml += getXMLRow('ORIGIN', item.pdfExqRugsOrigin, 9);
+
+            // Sizes row
+            xml += getXMLRow('SIZES', item.programSize, 12, 'font-size:10pt');
+
+            xml += '</table></td>';
+            return xml;
+        }
 
         function getSelectedOption(request, optionName, defaultValue) {
             var value = defaultValue;
