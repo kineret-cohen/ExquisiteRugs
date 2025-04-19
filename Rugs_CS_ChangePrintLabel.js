@@ -199,10 +199,6 @@ define(['N/url', 'N/currentRecord', 'N/search'],
                 fieldId: 'custpage_labeltype'
             });
 
-            var pageSizeField = context.currentRecord.getField({
-                fieldId: 'custpage_pagesize'
-            });
-
             // Set Letter as selection when not ER, but only if it's not already set
             if (selectedLabelType !== "ER") {
                 var currentPageSize = context.currentRecord.getValue({
@@ -217,7 +213,11 @@ define(['N/url', 'N/currentRecord', 'N/search'],
             }
 
             // Disable/enable page size field based on label type
-            pageSizeField.isDisabled = (selectedLabelType !== "ER");
+            var pageSizeField = context.currentRecord.getField({
+                fieldId: 'custpage_pagesize'
+            });
+            if (pageSizeField)
+                pageSizeField.isDisabled = (selectedLabelType !== "ER");
 
             // Update logo field visibility
             var logoSelection = context.currentRecord.getField({
