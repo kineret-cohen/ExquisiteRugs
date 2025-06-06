@@ -73,40 +73,59 @@ define(["N/record", "N/search", "N/runtime"],
                         line: ctrItem
                     });
 
-                    // WE "ALLOCATE" THE SERIAL NUMBERS FIRST (EVEN IF EVENTUALLY WE WON'T USE THEM ALL)
-                    var currentSerialNumber = createSerialNumbers(qty);
+                    // first check which serial numbers we need to generate
+                    var serialNumbersToGenerate = [];
                     for (var qtyCtr = 0; qtyCtr < qty; qtyCtr++) {
-                        log.debug(title, 'Line ' + ctrItem + ', Qty ' + (qtyCtr + 1) + ': Generated serial number ' + (currentSerialNumber + qtyCtr));
-
-                        var sublistFieldValue = inventoryDetailSubrecord.getSublistValue({
-                            sublistId: 'inventoryassignment',
-                            fieldId: 'receiptinventorynumber',
-                            line: qtyCtr
-                        });
-                        if (triggerType == 'create' || isEmpty(sublistFieldValue)) {
-
-                            inventoryDetailSubrecord.insertLine({
+                        
+                        // check if we need to add a new serial number
+                        if (triggerType != 'create') { 
+                            var sublistFieldValue = inventoryDetailSubrecord.getSublistValue({
                                 sublistId: 'inventoryassignment',
+                                fieldId: 'receiptinventorynumber',
                                 line: qtyCtr
                             });
 
-                            inventoryDetailSubrecord.setSublistValue({
-                                sublistId: 'inventoryassignment',
-                                fieldId: 'receiptinventorynumber',
-                                line: qtyCtr,
-                                value: String(currentSerialNumber + qtyCtr)
-                            });
+                            if (!isEmpty(sublistFieldValue)) {
+                                log.debug(title, 'Line ' + ctrItem + ', Qty ' + (qtyCtr + 1) + ': Skipping - already has serial number ' + sublistFieldValue);
+                                continue;
+                            }
+                        }
 
-                            inventoryDetailSubrecord.setSublistValue({
-                                sublistId: 'inventoryassignment',
-                                fieldId: 'quantity',
-                                line: qtyCtr,
-                                value: 1
-                            });
-                        }
-                        else {
-                            log.debug(title, 'Line ' + ctrItem + ', Qty ' + (qtyCtr + 1) + ': Skipping - already has serial number ' + sublistFieldValue);
-                        }
+                        serialNumbersToGenerate.push(qtyCtr);
+                    }
+
+                    if (serialNumbersToGenerate.length == 0) {
+                        log.debug(title, 'Line ' + ctrItem + ': No serial numbers to generate');
+                        continue;
+                    }
+
+                    // We "allocate" all the serial numbers we need to generate
+                    var currentSerialNumber = createSerialNumbers(serialNumbersToGenerate.length);
+
+                    // and now we add the serial numbers to the relevant inventory detail subrecord
+                    for (var i = 0; i < serialNumbersToGenerate.length; i++) {
+  
+                        qtyCtr = serialNumbersToGenerate[i];
+                        log.debug(title, 'Line ' + ctrItem + ', Qty ' + (qtyCtr + 1) + ': Generating serial number - conditions met');
+                        inventoryDetailSubrecord.insertLine({
+                            sublistId: 'inventoryassignment',
+                            line: qtyCtr
+                        });
+
+                        inventoryDetailSubrecord.setSublistValue({
+                            sublistId: 'inventoryassignment',
+                            fieldId: 'receiptinventorynumber',
+                            line: qtyCtr,
+                            value: String(currentSerialNumber + i)
+                        });
+
+                        inventoryDetailSubrecord.setSublistValue({
+                            sublistId: 'inventoryassignment',
+                            fieldId: 'quantity',
+                            line: qtyCtr,
+                            value: 1
+                        });
+
                     }
                 }
 
