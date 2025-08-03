@@ -32,9 +32,16 @@ define(["N/record", "N/search", "N/runtime"],
             log.debug(title, '======== END ========');
         }
 
+        function printUsage(title, action) {
+            var currentUsage = runtime.getCurrentScript().getRemainingUsage();
+            log.debug(title, "Usage so far after " + action + ": " + currentUsage);
+        }
+
         function afterSubmit_generateSerialNumbers(context) {
             var title = 'afterSubmit_generateSerialNumbers';
             log.debug(title, '======== START ========');
+
+            printUsage(title, "start");
             try {
                 var triggerType = context.type;
                 if (ALLOWED_TRIGGER_MODES.indexOf(triggerType) == -1) {
@@ -52,11 +59,19 @@ define(["N/record", "N/search", "N/runtime"],
                     id: recId
                 });
 
+                printUsage(title, "load record");
+
                 var numLines = newRecord.getLineCount({
                     sublistId: 'item'
                 });
 
+                printUsage(title, "getLineCount");
+
                 log.debug(title, 'Total number of line items: ' + numLines);
+
+                // First pass: Calculate total serial numbers needed and collect line data
+                var totalSerialNumbersNeeded = 0;
+                var lineData = [];
 
                 for (var ctrItem = 0; ctrItem < numLines; ctrItem++) {
                     var qty = newRecord.getSublistValue({
@@ -64,6 +79,8 @@ define(["N/record", "N/search", "N/runtime"],
                         fieldId: 'quantity',
                         line: ctrItem
                     });
+
+                    printUsage(title, "getSublistValue");
                     
                     log.debug(title, 'Processing line item ' + ctrItem + ' with quantity ' + qty);
                     
@@ -73,17 +90,21 @@ define(["N/record", "N/search", "N/runtime"],
                         line: ctrItem
                     });
 
-                    // first check which serial numbers we need to generate
+                    printUsage(title, "getSublistSubrecord");
+
+                    // Check which serial numbers we need to generate for this line
                     var serialNumbersToGenerate = [];
                     for (var qtyCtr = 0; qtyCtr < qty; qtyCtr++) {
                         
-                        // check if we need to add a new serial number
+                        // Check if we need to add a new serial number
                         if (triggerType != 'create') { 
                             var sublistFieldValue = inventoryDetailSubrecord.getSublistValue({
                                 sublistId: 'inventoryassignment',
                                 fieldId: 'receiptinventorynumber',
                                 line: qtyCtr
                             });
+
+                            printUsage(title, "inventoryDetailSubrecord.getSublistValue");
 
                             if (!isEmpty(sublistFieldValue)) {
                                 log.debug(title, 'Line ' + ctrItem + ', Qty ' + (qtyCtr + 1) + ': Skipping - already has serial number ' + sublistFieldValue);
@@ -94,19 +115,41 @@ define(["N/record", "N/search", "N/runtime"],
                         serialNumbersToGenerate.push(qtyCtr);
                     }
 
-                    if (serialNumbersToGenerate.length == 0) {
+                    if (serialNumbersToGenerate.length > 0) {
+                        totalSerialNumbersNeeded += serialNumbersToGenerate.length;
+                        lineData.push({
+                            lineIndex: ctrItem,
+                            inventoryDetailSubrecord: inventoryDetailSubrecord,
+                            serialNumbersToGenerate: serialNumbersToGenerate,
+                            quantity: serialNumbersToGenerate.length
+                        });
+                        log.debug(title, 'Line ' + ctrItem + ': Need to generate ' + serialNumbersToGenerate.length + ' serial numbers');
+                    } else {
                         log.debug(title, 'Line ' + ctrItem + ': No serial numbers to generate');
-                        continue;
                     }
+                }
 
-                    // We "allocate" all the serial numbers we need to generate
-                    var currentSerialNumber = createSerialNumbers(serialNumbersToGenerate.length);
+                // Allocate all serial numbers at once if needed
+                var startingSerialNumber = 1;
+                if (totalSerialNumbersNeeded > 0) {
+                    startingSerialNumber = createSerialNumbers(totalSerialNumbersNeeded);
+                    log.debug(title, 'Allocated ' + totalSerialNumbersNeeded + ' serial numbers starting from ' + startingSerialNumber);
+                }
 
-                    // and now we add the serial numbers to the relevant inventory detail subrecord
-                    for (var i = 0; i < serialNumbersToGenerate.length; i++) {
-  
-                        qtyCtr = serialNumbersToGenerate[i];
-                        log.debug(title, 'Line ' + ctrItem + ', Qty ' + (qtyCtr + 1) + ': Generating serial number - conditions met');
+                // Second pass: Distribute serial numbers to inventory detail records
+                var currentSerialNumber = startingSerialNumber;
+                for (var i = 0; i < lineData.length; i++) {
+                    var lineInfo = lineData[i];
+                    var inventoryDetailSubrecord = lineInfo.inventoryDetailSubrecord;
+                    var serialNumbersToGenerate = lineInfo.serialNumbersToGenerate;
+                    var ctrItem = lineInfo.lineIndex;
+
+                    log.debug(title, 'Distributing ' + serialNumbersToGenerate.length + ' serial numbers to line ' + ctrItem);
+
+                    for (var j = 0; j < serialNumbersToGenerate.length; j++) {
+                        var qtyCtr = serialNumbersToGenerate[j];
+                        log.debug(title, 'Line ' + ctrItem + ', Qty ' + (qtyCtr + 1) + ': Assigning serial number ' + (currentSerialNumber + j));
+                        
                         inventoryDetailSubrecord.insertLine({
                             sublistId: 'inventoryassignment',
                             line: qtyCtr
@@ -116,7 +159,7 @@ define(["N/record", "N/search", "N/runtime"],
                             sublistId: 'inventoryassignment',
                             fieldId: 'receiptinventorynumber',
                             line: qtyCtr,
-                            value: String(currentSerialNumber + i)
+                            value: String(currentSerialNumber + j)
                         });
 
                         inventoryDetailSubrecord.setSublistValue({
@@ -126,13 +169,18 @@ define(["N/record", "N/search", "N/runtime"],
                             value: 1
                         });
 
+                        printUsage(title, "inventoryDetailSubrecord update");
                     }
+
+                    currentSerialNumber += serialNumbersToGenerate.length;
                 }
 
                 var recordId = newRecord.save({
                     enableSourcing: true,
                     ignoreMandatoryFields: true
                 });
+
+                printUsage(title, "Save");
 
                 if (context.type == 'create') {
                     var poRecord = record.load({
@@ -220,6 +268,8 @@ define(["N/record", "N/search", "N/runtime"],
             });
             var serialNumber_search_results = searchAll(serialNumber_search);
 
+            printUsage(title, "searchAll");
+
             if (serialNumber_search_results.length === 0) {
                 log.error(title, 'No serial number record found');
                 throw 'Could not generate serial number - no serial number record exists';
@@ -238,6 +288,7 @@ define(["N/record", "N/search", "N/runtime"],
                         'custrecord_aecc_serial_number': newSerialNumber
                     }
                 });
+                printUsage(title, "submitFields");
                 log.debug(title, 'Successfully updated global serial number to: ' + newSerialNumber);
             } catch (error) {
                 log.error(title, 'Failed to update global serial number: ' + error.toString());
